@@ -27,8 +27,9 @@ The metric is the **IPCW concordance index** (Uno's C-index), truncated at
 - Look at every pair of patients where we know who died first.
 - Count the share of those pairs where the model gave the higher risk to the patient who died first.
 - 0.5 = random guessing, 1.0 = perfect ranking.
-- "IPCW" (inverse probability of censoring weighting) gives more weight to pairs
-  that were less likely to be observed, which corrects the bias caused by censoring.
+- "IPCW" (inverse probability of censoring weighting) gives each such pair the weight
+  1 / G(T)², where G(T) is the probability of still being followed at the time T of
+  the first death. Late deaths are rarely observed, so they count more.
 
 ## Data
 
@@ -43,7 +44,7 @@ The metric is the **IPCW concordance index** (Uno's C-index), truncated at
 The data are **not** included in this repository (Challenge Data terms of use).
 To reproduce the work, register for the challenge and place the five files in `data/raw/`.
 
-## Key findings so far (Stage 1 — data audit)
+## Stage 1 — data audit: key findings
 
 1. **The test set is one new hospital.** All 1,193 test patients come from centre
    `KYW`, which never appears in the 23 training centres. So the usual random
@@ -65,7 +66,57 @@ To reproduce the work, register for the challenge and place the five files in `d
 
 ![Patients per centre](figures/fig03_centers.png)
 
-![Training vs test distributions](figures/fig02_clinical_distributions.png)
+## Stage 2 — Kaplan–Meier, log-rank tests and the metric by hand
+
+**Kaplan–Meier.** I computed the survival curve by hand (product of 1 − deaths/at-risk
+at each death time) and it matches `lifelines` to within 2×10⁻¹⁴.
+
+- Median overall survival: **3.15 years**.
+- Survival at 1, 3, 5 and 7 years: **79.0%, 50.9%, 36.4%, 27.5%**.
+
+![Overall survival](figures/fig06_km_overall.png)
+
+**Groups and log-rank tests.** All four splits separate the curves strongly (p < 0.001):
+
+| Comparison | Group | Patients | Median survival (years) | Log-rank χ² |
+|---|---|---|---|---|
+| Bone-marrow blasts | < 5% / 5–20% / > 20% | 2015 / 942 / 137 | 4.47 / 1.68 / 1.19 | 272.1 (2 df) |
+| TP53 | not mutated / mutated | 2805 / 368 | 3.59 / 1.00 | 244.6 |
+| Monosomy 7 | no / yes | 3008 / 165 | 3.41 / 0.95 | 139.5 |
+| SF3B1 | not mutated / mutated | 2446 / 727 | 2.57 / 4.56 | 51.8 |
+
+SF3B1 is the only *protective* mutation here: mutated patients live longer.
+I also computed the TP53 log-rank test by hand: 271 deaths observed vs 112.13
+expected, χ² = 158.87² / 103.17 = 244.64, the same as `lifelines`.
+
+![Survival by group](figures/fig07_km_groups.png)
+
+**The censoring curve.** G(t), the probability of still being followed, falls to
+**0.198 at 7 years**. A death just before 7 years therefore gets weight
+1/0.198² ≈ **25.6** in the metric, against about 1.5 for a death at 1 year.
+
+**The metric by hand.** On a 6-patient toy example I listed all 9 comparable pairs:
+Harrell's C = 7/9 = **0.778**, and the IPCW C-index = 8.125 / 13.203 = **0.615**.
+Both match `scikit-survival` exactly. The IPCW value is lower because the two
+wrongly ordered pairs start from later deaths, which carry larger weights.
+
+**Single-variable baselines** (IPCW C-index, τ = 7, no model fitted):
+
+| Score | IPCW C |
+|---|---|
+| + bone-marrow blasts | 0.616 |
+| − platelets | 0.608 |
+| + number of mutations | 0.605 |
+| − haemoglobin | 0.593 |
+| + TP53 mutated (0/1) | 0.553 |
+| − SF3B1 mutated (0/1) | 0.544 |
+| + monosomy 7 (0/1) | 0.526 |
+| random numbers | 0.509 |
+
+A key lesson: TP53 has a huge log-rank statistic but a C-index of only 0.553.
+Only 11.6% of patients carry it, so most pairs are tied on a 0/1 score (counted as ½).
+**Statistical significance is not the same as ranking power.** Combining variables
+in a model (Stages 4–5) is how we go beyond about 0.62.
 
 ## Project structure
 
@@ -78,10 +129,12 @@ aml-survival-prediction/
 │   ├── raw/            <- the 5 challenge CSV files go here (not on GitHub)
 │   └── processed/      <- cleaned tables created by later stages
 ├── src/
-│   ├── config.py           paths, 7-year horizon, random seed, colours
-│   ├── load_data.py        functions that read the 5 files
-│   ├── 01_check_setup.py   Stage 0: checks Python, packages and data files
-│   └── 02_data_audit.py    Stage 1: data audit, 5 figures, 4 tables
+│   ├── config.py             paths, 7-year horizon, random seed, colours, plot style
+│   ├── load_data.py          functions that read the files
+│   ├── 01_check_setup.py     Stage 0: checks Python, packages and data files
+│   ├── 02_data_audit.py      Stage 1: data audit, 5 figures, 4 tables
+│   ├── 03_kaplan_meier.py    Stage 2: KM by hand, group curves, log-rank, censoring curve
+│   └── 04_cindex_by_hand.py  Stage 2: C-index and IPCW C-index by hand, baselines
 ├── figures/            <- PNG figures (used by the README and the paper)
 ├── results/tables/     <- CSV/TXT summaries
 ├── submissions/        <- files uploaded to Challenge Data (kept local)
@@ -99,6 +152,8 @@ pip install -r requirements.txt
 pip install --no-deps scikit-survival
 python src/01_check_setup.py
 python src/02_data_audit.py
+python src/03_kaplan_meier.py
+python src/04_cindex_by_hand.py
 ```
 
 **Why `--no-deps` for scikit-survival?** It lists `ecos` as a dependency, but `ecos`
@@ -112,8 +167,8 @@ does not use, so scikit-survival is installed without it.
 |---|---|---|
 | 0 | Setup: repository, packages, data check | ✅ done |
 | 1 | Data audit: linking, outcome, missing values, centres, mutations, cytogenetics | ✅ done |
-| 2 | Kaplan–Meier curves, log-rank tests, C-index and IPCW C-index computed by hand | ⏳ next |
-| 3 | Feature engineering: clinical, cytogenetic and mutation features | ⬜ |
+| 2 | Kaplan–Meier curves, log-rank tests, C-index and IPCW C-index computed by hand | ✅ done |
+| 3 | Feature engineering: clinical, cytogenetic and mutation features | ⏳ next |
 | 4 | Cox regression (benchmark, ridge/lasso), grouped cross-validation, first submission | ⬜ |
 | 5 | Machine-learning survival models: gradient-boosted survival, random survival forest | ⬜ |
 | 6 | Model comparison, ensemble, interpretation, final submission | ⬜ |
@@ -127,10 +182,15 @@ does not use, so scikit-survival is installed without it.
 
 ## References
 
-- Noren D. P. *et al.* (2016). A crowdsourcing approach to developing and assessing
-  prediction algorithms for AML prognosis. *PLOS Computational Biology* 12(6): e1004890.
+- Kaplan E. L. and Meier P. (1958). Nonparametric estimation from incomplete
+  observations. *Journal of the American Statistical Association* 53(282).
+- Mantel N. (1966). Evaluation of survival data and two new rank order statistics
+  arising in its consideration. *Cancer Chemotherapy Reports* 50(3).
+- Harrell F. E. *et al.* (1982). Evaluating the yield of medical tests. *JAMA* 247(18).
 - Uno H. *et al.* (2011). On the C-statistics for evaluating overall adequacy of risk
   prediction procedures with censored survival data. *Statistics in Medicine* 30(10).
+- Noren D. P. *et al.* (2016). A crowdsourcing approach to developing and assessing
+  prediction algorithms for AML prognosis. *PLOS Computational Biology* 12(6): e1004890.
 - Pölsterl S. (2020). scikit-survival: a library for time-to-event analysis built on
   top of scikit-learn. *Journal of Machine Learning Research* 21(212).
 - Davidson-Pilon C. (2019). lifelines: survival analysis in Python. *Journal of Open

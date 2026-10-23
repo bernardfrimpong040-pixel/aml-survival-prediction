@@ -1,0 +1,8 @@
+Log-rank test by hand: TP53 mutated (group 1) vs not mutated
+  Observed deaths in TP53 group,   O1 = 271
+  Expected deaths if no difference, E1 = 112.13
+  O1 - E1 = 158.87   (more deaths than expected -> higher risk)
+  Sum of variances V = 103.17
+  chi2 = (O1 - E1)^2 / V = (158.87)^2 / 103.17 = 244.64
+  p-value (1 degree of freedom) = 3.8e-55
+  lifelines chi2 (rounded) = 244.6

@@ -1,0 +1,10 @@
+score,harrell_C,ipcw_C_tau7
+Random numbers (reference),0.5089,0.5095
++ BM_BLAST,0.6313,0.6157
+- HB,0.6033,0.5934
+- PLT,0.6308,0.6081
++ TP53 mutated (0/1),0.5662,0.5535
++ Monosomy 7 (0/1),0.5321,0.5258
+- SF3B1 mutated (0/1),0.5539,0.5443
++ Number of mutations,0.6016,0.6046
+- BM_BLAST (wrong direction),0.3687,0.3843

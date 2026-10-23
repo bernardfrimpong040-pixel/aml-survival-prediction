@@ -43,3 +43,18 @@ def load_raw():
         # pd.read_csv reads a CSV file into a DataFrame (a table).
         data[key] = pd.read_csv(config.DATA_RAW / file_name)
     return data
+
+
+def load_train_with_outcome():
+    """
+    Training clinical table joined with the outcome, keeping ONLY patients
+    whose outcome is recorded (the 150 patients without one are dropped).
+    Also returns the training mutation table.
+    """
+    data = load_raw()
+    target = data["target_train"].dropna(subset=["OS_YEARS", "OS_STATUS"])
+    # .merge joins the two tables on ID; "inner" keeps IDs present in both.
+    train = data["clinical_train"].merge(target, on="ID", how="inner")
+    # OS_STATUS is stored as 0.0 / 1.0; make it a whole number 0 / 1.
+    train["OS_STATUS"] = train["OS_STATUS"].astype(int)
+    return train, data["molecular_train"]

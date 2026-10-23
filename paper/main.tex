@@ -11,6 +11,7 @@
 \usepackage{graphicx}
 \usepackage{float}          % lets us use [H] to keep figures/tables in place
 \usepackage{booktabs}       % nicer table lines
+\usepackage{multirow}       % one cell spanning several table rows
 \usepackage{caption}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
@@ -23,7 +24,7 @@
 Kaplan--Meier, Cox Regression and Machine-Learning Survival Models}
 \author{Bernard Frimpong\\
 \small M.S. Applied Mathematics, University of Akron}
-\date{Working draft --- Stage 1 (data audit), October 2026}
+\date{Working draft --- Stage 2 (Kaplan--Meier and the metric), October 2026}
 
 \begin{document}
 \maketitle
@@ -33,11 +34,15 @@ This report documents my work on the QRT $\times$ Institut Gustave Roussy data
 challenge on Challenge Data (ENS Paris), whose goal is to rank adult patients with
 myeloid leukemia by their risk of death, using clinical measurements, cytogenetic
 reports and somatic gene mutations. Models are scored with the inverse probability
-of censoring weighted (IPCW) concordance index truncated at seven years. This draft
-covers the data audit. Its main finding is that the 1{,}193 test patients all come
-from a single clinical centre that is absent from the 23 training centres, and that
-this centre's patients are clinically sicker, with more than twice the training rate
-of \textit{TP53} mutations. Model validation will therefore hold out whole centres.
+of censoring weighted (IPCW) concordance index truncated at seven years. The data
+audit shows that the 1{,}193 test patients all come from a single clinical centre that
+is absent from the 23 training centres, and that this centre's patients are clinically
+sicker, so model validation will hold out whole centres. Kaplan--Meier analysis gives a
+median overall survival of 3.15 years, with strong separation by bone-marrow blasts,
+\textit{TP53} and \textit{SF3B1} mutations and monosomy~7 (log-rank $p<0.001$ for all).
+The Kaplan--Meier estimator, a log-rank test and both concordance indices were computed
+by hand and match standard software. Single variables reach an IPCW C-index of at most
+0.616, which is the baseline that multivariable models must beat.
 \end{abstract}
 
 % ==================================================================
@@ -100,6 +105,7 @@ mentioned in the challenge description, the sequencing read depth (\texttt{DEPTH
 
 % ==================================================================
 \section{The evaluation metric}
+\label{sec:metric}
 % ==================================================================
 For each patient $i$ we observe a time $T_i$ (\texttt{OS\_YEARS}), an event indicator
 $\Delta_i$ (1 = death, 0 = censored), and the model gives a risk score $\eta_i$.
@@ -110,8 +116,10 @@ when $T_i < T_j$ and patient $i$ died ($\Delta_i = 1$). The pair is \emph{concor
 when the model agrees, $\eta_i > \eta_j$. Harrell's C-index~\cite{harrell1982} is
 \begin{equation}
 C = \frac{\text{number of concordant comparable pairs}}{\text{number of comparable pairs}}.
+\label{eq:harrell}
 \end{equation}
-A value of $0.5$ corresponds to random guessing and $1$ to a perfect ranking.
+A value of $0.5$ corresponds to random guessing and $1$ to a perfect ranking. Pairs
+with equal risk scores count as one half.
 
 \paragraph{IPCW C-index (Uno's C).}
 Patients who die late are less likely to be observed dying, because many patients are
@@ -125,6 +133,7 @@ C_\tau = \frac{\displaystyle\sum_{i}\sum_{j} \Delta_i\,\hat G(T_i)^{-2}\,
 \mathbf{1}(T_i < T_j,\ T_i < \tau)\,\mathbf{1}(\eta_i > \eta_j)}
 {\displaystyle\sum_{i}\sum_{j} \Delta_i\,\hat G(T_i)^{-2}\,
 \mathbf{1}(T_i < T_j,\ T_i < \tau)}.
+\label{eq:uno}
 \end{equation}
 In plain language: a death at a time when few patients remain uncensored is rare to
 observe, so it counts more. Only the ordering of the scores $\eta_i$ matters. The
@@ -155,7 +164,7 @@ Deaths ($\Delta = 1$)                       & 1{,}600 (50.4\%) \\
 Censored ($\Delta = 0$)                     & 1{,}573 (49.6\%) \\
 Median observed time (years)                & 1.65 \\
 Maximum observed time (years)               & 22.04 \\
-Observed time exactly 0                     & 53 \\
+Observed time exactly 0 (all censored)      & 53 \\
 Observed beyond the 7-year horizon          & 172 \\
 \bottomrule
 \end{tabular}
@@ -239,8 +248,10 @@ corresponds to recorded values of zero.}
 
 The test patients are clinically sicker: lower haemoglobin and platelets, lower
 neutrophils, and a much larger share with bone-marrow blasts above 20\%
-(17.6\% versus 4.2\%). Monocytes are missing for 74\% of test patients, so a model
-that leans on that variable would be fragile on the test set.
+(17.6\% versus 4.2\%). Monocytes are missing for 74\% of test patients (883 of 1{,}193),
+so a model that leans on that variable would be fragile on the test set: all 883 would
+receive the same imputed value, and the training median (0.37) is above the test
+centre's own median (0.20).
 
 \subsection{Gene mutations}
 Training patients carry on average 3.29 recorded mutations and test patients 2.59;
@@ -308,12 +319,283 @@ unfamiliar to the model.
 \end{enumerate}
 
 % ==================================================================
+\section{Survival analysis without a model (Stage 2)}
+% ==================================================================
+
+\subsection{The Kaplan--Meier estimator}
+Let $t_1 < t_2 < \dots$ be the distinct times at which at least one death occurs. At
+each $t_k$ let $n_k$ be the number of patients still \emph{at risk} just before $t_k$
+(neither dead nor censored yet) and $d_k$ the number of deaths at $t_k$. The
+Kaplan--Meier estimator~\cite{kaplan1958} of the survival function is
+\begin{equation}
+\hat S(t) = \prod_{k:\ t_k \le t} \left(1 - \frac{d_k}{n_k}\right).
+\label{eq:km}
+\end{equation}
+In plain language: to survive past $t_k$ you must survive every earlier death time,
+and at each one the chance of surviving, given you were still alive, is the share of
+the at-risk patients who did not die. Censored patients never make the curve drop;
+they simply leave the risk set, so they count fully for as long as they were observed.
+
+Table~\ref{tab:kmsteps} shows the first six steps. The first death occurs on day one
+($t = 0.00274$ years) with $n = 3{,}120$ patients at risk: this is $3{,}173 - 53$, because
+the 53 patients with an observed time of zero were all censored at that time and left
+the risk set immediately. The first two steps are
+\begin{align*}
+\hat S(0.00274) &= 1 - \tfrac{1}{3120} = 0.99968,\\
+\hat S(0.00822) &= 0.99968 \times \left(1 - \tfrac{2}{3114}\right)
+                 = 0.99968 \times 0.99936 = 0.99904.
+\end{align*}
+My hand implementation of Equation~\eqref{eq:km} agrees with the \texttt{lifelines}
+library~\cite{lifelines2019} at every death time to within $2\times 10^{-14}$.
+
+\begin{table}[H]
+\centering
+\caption{First six steps of the Kaplan--Meier estimator, computed by hand.}
+\label{tab:kmsteps}
+\begin{tabular}{rrrrr}
+\toprule
+$t_k$ (years) & $n_k$ & $d_k$ & $1 - d_k/n_k$ & $\hat S(t_k)$ \\
+\midrule
+0.00274 & 3120 & 1 & 0.99968 & 0.99968 \\
+0.00822 & 3114 & 2 & 0.99936 & 0.99904 \\
+0.01644 & 3107 & 1 & 0.99968 & 0.99872 \\
+0.02192 & 3103 & 2 & 0.99936 & 0.99807 \\
+0.02466 & 3098 & 1 & 0.99968 & 0.99775 \\
+0.02740 & 3095 & 2 & 0.99935 & 0.99711 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The median overall survival, the first time at which $\hat S(t) \le 0.5$, is
+\textbf{3.15 years}. Table~\ref{tab:kmyears} and Figure~\ref{fig:kmoverall} give the
+whole curve.
+
+\begin{table}[H]
+\centering
+\caption{Kaplan--Meier overall survival with 95\% confidence intervals.}
+\label{tab:kmyears}
+\begin{tabular}{rrr}
+\toprule
+Years & $\hat S(t)$ & 95\% CI \\
+\midrule
+1 & 0.790 & 0.774--0.804 \\
+2 & 0.614 & 0.595--0.633 \\
+3 & 0.509 & 0.489--0.529 \\
+5 & 0.364 & 0.342--0.386 \\
+7 & 0.275 & 0.250--0.299 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig06_km_overall.png}
+\caption{Kaplan--Meier estimate of overall survival for the 3{,}173 training patients,
+with a 95\% confidence band.}
+\label{fig:kmoverall}
+\end{figure}
+
+\subsection{Comparing groups: the log-rank test}
+To ask whether two groups have different survival, the log-rank
+test~\cite{mantel1966} compares, at each death time, the deaths observed in group~1
+with the deaths it would receive if the groups were identical. With $n$ at risk in
+total, $n_1$ in group~1, $n_2 = n - n_1$, $d$ deaths in total and $d_1$ in group~1,
+\begin{equation}
+E_{1k} = d\,\frac{n_1}{n}, \qquad
+V_k = \frac{n_1\, n_2\, d\,(n - d)}{n^2 (n-1)}, \qquad
+\chi^2 = \frac{\left(\sum_k (d_{1k} - E_{1k})\right)^2}{\sum_k V_k},
+\label{eq:logrank}
+\end{equation}
+which follows a $\chi^2$ distribution with one degree of freedom when the groups do not
+differ. In plain language: group~1 should get ``its fair share'' $n_1/n$ of the deaths
+at each time; $\chi^2$ measures how far the total gap is from zero, in units of its own
+variability.
+
+\paragraph{Worked example: \textit{TP53}.}
+Summing over all death times, the 368 patients with a \textit{TP53} mutation had
+$O_1 = 271$ observed deaths against $E_1 = 112.13$ expected, with total variance
+$V = 103.17$. Hence
+\[
+\chi^2 = \frac{(271 - 112.13)^2}{103.17} = \frac{158.87^2}{103.17} = 244.64,
+\qquad p = 3.8\times 10^{-55},
+\]
+identical to the \texttt{lifelines} result. \textit{TP53}-mutated patients died more
+than twice as often as expected under ``no difference''.
+
+Table~\ref{tab:logrank} and Figure~\ref{fig:kmgroups} show four comparisons. Monosomy~7
+was detected in the karyotype text as ``\texttt{-7}'' after a comma, slash or the
+start of the string and not followed by another digit; 79 patients without a blast
+value are left out of the blast comparison.
+
+\begin{table}[H]
+\centering
+\caption{Kaplan--Meier summaries and log-rank tests by group. All $p < 0.001$.}
+\label{tab:logrank}
+\begin{tabular}{llrrrrr}
+\toprule
+Comparison & Group & $n$ & Deaths & Median (y) & $\hat S(3)$ & $\chi^2$ (df) \\
+\midrule
+Blasts & $<5\%$      & 2015 & 841  & 4.47 & 0.620 & \multirow{3}{*}{272.1 (2)} \\
+       & 5--20\%     & 942  & 622  & 1.68 & 0.326 & \\
+       & $>20\%$     & 137  & 89   & 1.19 & 0.238 & \\
+\midrule
+\textit{TP53}  & not mutated & 2805 & 1329 & 3.59 & 0.549 & \multirow{2}{*}{244.6 (1)} \\
+               & mutated     & 368  & 271  & 1.00 & 0.207 & \\
+\midrule
+Monosomy 7     & no          & 3008 & 1477 & 3.41 & 0.528 & \multirow{2}{*}{139.5 (1)} \\
+               & yes         & 165  & 123  & 0.95 & 0.169 & \\
+\midrule
+\textit{SF3B1} & not mutated & 2446 & 1289 & 2.57 & 0.463 & \multirow{2}{*}{51.8 (1)} \\
+               & mutated     & 727  & 311  & 4.56 & 0.665 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig07_km_groups.png}
+\caption{Kaplan--Meier curves by bone-marrow blast level, \textit{TP53} mutation,
+\textit{SF3B1} mutation and monosomy~7.}
+\label{fig:kmgroups}
+\end{figure}
+
+Higher blasts, \textit{TP53} mutation and monosomy~7 all shorten survival sharply; the
+median survival of \textit{TP53}-mutated patients is one year against 3.59 years for the
+rest. \textit{SF3B1} is protective: mutated patients have a median survival of 4.56
+years against 2.57. These directions agree with established clinical risk
+stratification and with the sicker profile of the test centre noted in Stage~1.
+
+\subsection{The censoring curve}
+Swapping the roles of death and censoring in Equation~\eqref{eq:km}, so that the
+``event'' is being censored, gives the \emph{reverse Kaplan--Meier} estimate
+$\hat G(t)$: the probability that a patient is still being followed at time $t$. This
+is exactly the $\hat G$ in the metric (Equation~\eqref{eq:uno}).
+
+\begin{table}[H]
+\centering
+\caption{Censoring curve and the resulting metric weight of a death at time $t$.}
+\label{tab:gcurve}
+\begin{tabular}{rrr}
+\toprule
+$t$ (years) & $\hat G(t)$ & weight $1/\hat G(t)^2$ \\
+\midrule
+1 & 0.827 & $1/0.827^2 = 1.46$ \\
+3 & 0.613 & $1/0.613^2 = 2.66$ \\
+5 & 0.347 & $1/0.347^2 = 8.32$ \\
+7 & 0.198 & $1/0.198^2 = 25.61$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig08_censoring_curve.png}
+\caption{Survival curve $\hat S(t)$ and censoring curve $\hat G(t)$. By seven years only
+19.8\% of patients are still being followed.}
+\label{fig:gcurve}
+\end{figure}
+
+Table~\ref{tab:gcurve} shows the practical effect: a pair started by a death just
+before seven years weighs about $25.6/1.46 \approx 17.5$ times as much as one started
+by a death at one year. A model that ranks late deaths poorly is therefore penalised
+far more by the challenge metric than by Harrell's C.
+
+\subsection{The metric by hand: a six-patient example}
+Figure~\ref{fig:toy} shows six patients with observed times, statuses and risk scores.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig09_toy_example.png}
+\caption{Toy example: crosses are deaths, circles are censored patients; each patient
+carries a risk score.}
+\label{fig:toy}
+\end{figure}
+
+\paragraph{Comparable pairs.} Only deaths can start a comparable pair, and only with
+patients observed for longer. Patient~A (death at 1) is comparable with B, C, D, E, F;
+patient~C (death at 3) with D, E, F; patient~E (death at 5) with F; patient~F (death at
+8) has nobody after it. That gives $5 + 3 + 1 = 9$ comparable pairs. Of these, two are
+discordant: $(C, D)$ because $0.60 < 0.80$ and $(E, F)$ because $0.05 < 0.10$. So
+\[
+C_{\text{Harrell}} = \frac{7}{9} = 0.778.
+\]
+
+\paragraph{Censoring curve.} Censorings occur at $t=2$ (B), with 5 patients at risk,
+and at $t = 4$ (D), with 3 at risk:
+\[
+\hat G(2) = 1 - \tfrac{1}{5} = 0.8, \qquad
+\hat G(4) = 0.8 \times \left(1 - \tfrac{1}{3}\right) = 0.5333.
+\]
+So $\hat G(1) = 1$, $\hat G(3) = 0.8$ and $\hat G(5) = 0.5333$, giving the weights
+\[
+w_A = \frac{1}{1^2} = 1, \qquad
+w_C = \frac{1}{0.8^2} = 1.5625, \qquad
+w_E = \frac{1}{0.5333^2} = 3.5156.
+\]
+Patient F died at $8 \ge \tau = 7$ and starts no pair anyway.
+
+\paragraph{IPCW C-index.}
+\begin{align*}
+\text{numerator}   &= 5\times 1 + 2 \times 1.5625 + 0 \times 3.5156 = 8.1250,\\
+\text{denominator} &= 5\times 1 + 3 \times 1.5625 + 1 \times 3.5156 = 13.2031,\\
+C_7 &= \frac{8.1250}{13.2031} = 0.615.
+\end{align*}
+Both values match \texttt{scikit-survival} exactly. The IPCW value is lower because both
+wrong pairs start from later deaths (C at 3 years, E at 5 years), whose weights are
+larger.
+
+\subsection{Single-variable baselines}
+Before fitting any model, each variable can be used directly as a risk score, with its
+direction fixed by clinical knowledge rather than learned from the outcome (missing
+values set to the median). Table~\ref{tab:single} and Figure~\ref{fig:single} give the
+results on the 3{,}173 training patients.
+
+\begin{table}[H]
+\centering
+\caption{Concordance of single-variable risk scores ($\tau = 7$ years).}
+\label{tab:single}
+\begin{tabular}{lrr}
+\toprule
+Risk score & Harrell's C & IPCW C \\
+\midrule
+Random numbers (reference)      & 0.509 & 0.509 \\
+$+$ bone-marrow blasts          & 0.631 & 0.616 \\
+$-$ platelets                   & 0.631 & 0.608 \\
+$+$ number of mutations         & 0.602 & 0.605 \\
+$-$ haemoglobin                 & 0.603 & 0.593 \\
+$+$ \textit{TP53} mutated (0/1) & 0.566 & 0.553 \\
+$-$ \textit{SF3B1} mutated (0/1)& 0.554 & 0.544 \\
+$+$ monosomy 7 (0/1)            & 0.532 & 0.526 \\
+$-$ bone-marrow blasts (wrong sign) & 0.369 & 0.384 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig10_single_variable_cindex.png}
+\caption{IPCW C-index of each single-variable risk score; 0.5 corresponds to random
+ranking.}
+\label{fig:single}
+\end{figure}
+
+Three lessons follow. First, reversing the sign of a score turns $C$ into $1 - C$
+($0.631 \to 0.369$), so the direction of a risk score matters. Second, binary markers
+rank poorly on their own even when their log-rank test is overwhelming:
+\textit{TP53} has $\chi^2 = 244.6$ but an IPCW C of only 0.553. Only 11.6\% of patients
+carry the mutation, so most comparable pairs have equal scores and count one half.
+Statistical significance and ranking power are different things. Third, no single
+variable exceeds about 0.62, so combining them in a multivariable model is necessary.
+
+% ==================================================================
 \section{Next steps}
 % ==================================================================
-Stage 2 will estimate Kaplan--Meier survival curves overall and by clinical and
-genetic groups, compare groups with log-rank tests, and compute the C-index and the
-IPCW C-index by hand on a small example before checking them against
-\texttt{scikit-survival}.
+Stage 3 will build features: clinical transforms and missing-value handling,
+cytogenetic indicators parsed from the normalised karyotype text (normal karyotype,
+monosomy~7, deletion 5q, complex karyotype and others), and mutation features (gene
+indicators, number of mutations, maximum VAF). All steps that learn from data will be
+fitted inside cross-validation folds. Stage 4 will then fit Cox models under
+centre-grouped cross-validation and produce the first submission.
 
 % ==================================================================
 \begin{thebibliography}{9}
@@ -339,6 +621,22 @@ with censored survival data,
 S.~P\"olsterl,
 scikit-survival: a library for time-to-event analysis built on top of scikit-learn,
 \textit{Journal of Machine Learning Research}, 21(212): 1--6, 2020.
+
+\bibitem{kaplan1958}
+E.~L. Kaplan and P.~Meier,
+Nonparametric estimation from incomplete observations,
+\textit{Journal of the American Statistical Association}, 53(282): 457--481, 1958.
+
+\bibitem{mantel1966}
+N.~Mantel,
+Evaluation of survival data and two new rank order statistics arising in its
+consideration,
+\textit{Cancer Chemotherapy Reports}, 50(3): 163--170, 1966.
+
+\bibitem{lifelines2019}
+C.~Davidson-Pilon,
+lifelines: survival analysis in Python,
+\textit{Journal of Open Source Software}, 4(40): 1317, 2019.
 
 \end{thebibliography}
 

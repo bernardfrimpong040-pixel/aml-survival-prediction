@@ -1,0 +1,10 @@
+comparison,group,patients,deaths,median_survival_years,S_at_3_years,logrank_chi2,degrees_of_freedom,p_value
+Bone-marrow blasts,Blasts < 5%,2015,841,4.47,0.62,272.1,2,8.3e-60
+Bone-marrow blasts,Blasts 5-20%,942,622,1.68,0.326,272.1,2,8.3e-60
+Bone-marrow blasts,Blasts > 20%,137,89,1.19,0.238,272.1,2,8.3e-60
+TP53 mutation,TP53 not mutated,2805,1329,3.59,0.549,244.6,1,3.8e-55
+TP53 mutation,TP53 mutated,368,271,1.0,0.207,244.6,1,3.8e-55
+SF3B1 mutation,SF3B1 not mutated,2446,1289,2.57,0.463,51.8,1,6.2e-13
+SF3B1 mutation,SF3B1 mutated,727,311,4.56,0.665,51.8,1,6.2e-13
+Monosomy 7 (-7) in karyotype,No monosomy 7,3008,1477,3.41,0.528,139.5,1,3.4e-32
+Monosomy 7 (-7) in karyotype,Monosomy 7,165,123,0.95,0.169,139.5,1,3.4e-32

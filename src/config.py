@@ -54,9 +54,36 @@ COLOR_TRAIN = "#2a78d6"   # blue   = training data
 COLOR_TEST = "#eb6834"    # orange = test data (centre KYW)
 COLOR_DEATH = "#2a78d6"   # blue   = patient died (event)
 COLOR_CENSOR = "#eb6834"  # orange = patient alive at last follow-up (censored)
+COLOR_GROUP3 = "#1baf7a"  # aqua   = third group when a plot has three groups
 TEXT_MAIN = "#0b0b0b"     # main text colour
 TEXT_SOFT = "#52514e"     # axis labels / secondary text
 GRID = "#e4e3df"          # light grid lines
+
+
+def set_plot_style():
+    """Apply the same clean plot style to every figure (used from Stage 2 on)."""
+    import matplotlib
+    matplotlib.use("Agg")                 # save figures to files, no pop-up windows
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "figure.dpi": 110,
+        "savefig.dpi": 200,
+        "font.size": 10,
+        "axes.edgecolor": GRID,
+        "axes.labelcolor": TEXT_SOFT,
+        "axes.titlecolor": TEXT_MAIN,
+        "axes.titleweight": "bold",
+        "axes.grid": True,
+        "grid.color": GRID,
+        "grid.linewidth": 0.8,
+        "axes.axisbelow": True,
+        "xtick.color": TEXT_SOFT,
+        "ytick.color": TEXT_SOFT,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "legend.frameon": False,
+    })
+    return plt
 
 
 def make_folders():
