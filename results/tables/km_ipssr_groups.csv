@@ -1,0 +1,11 @@
+grouping,group,patients,median_years,S_at_3_years,logrank_chi2
+IPSS-R cytogenetic category,Very good,109,4.44,0.636,513.8
+IPSS-R cytogenetic category,Good,1913,4.28,0.606,513.8
+IPSS-R cytogenetic category,Intermediate,393,2.26,0.432,513.8
+IPSS-R cytogenetic category,Poor,177,1.28,0.217,513.8
+IPSS-R cytogenetic category,Very poor,231,0.84,0.076,513.8
+IPSS-R risk group (full score),Very low,480,7.18,0.762,737.4
+IPSS-R risk group (full score),Low,1209,4.56,0.654,737.4
+IPSS-R risk group (full score),Intermediate,662,2.65,0.462,737.4
+IPSS-R risk group (full score),High,459,1.52,0.27,737.4
+IPSS-R risk group (full score),Very high,363,0.86,0.101,737.4

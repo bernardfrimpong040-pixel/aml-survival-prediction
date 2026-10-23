@@ -48,7 +48,7 @@ To reproduce the work, register for the challenge and place the five files in `d
 
 1. **The test set is one new hospital.** All 1,193 test patients come from centre
    `KYW`, which never appears in the 23 training centres. So the usual random
-   cross-validation would be too optimistic; I will hold out *whole centres*
+   cross-validation would be too optimistic; I hold out *whole centres*
    (grouped cross-validation) to imitate the real test situation.
 2. **The test patients are sicker.** Compared with training, the test centre has
    more patients with bone-marrow blasts above 20% (17.6% vs 4.2%), lower
@@ -60,7 +60,6 @@ To reproduce the work, register for the challenge and place the five files in `d
    so models should not rely heavily on that variable.
 5. **The cytogenetics text is written differently in the two sets**: lower case
    (`46,xy`) in training, upper case (`46,XY`) or the word `Normal` in the test set.
-   Feature extraction must normalise this first.
 6. **19 genes appear only in the test set**, so a model trained on training genes
    cannot use them.
 
@@ -89,34 +88,64 @@ SF3B1 is the only *protective* mutation here: mutated patients live longer.
 I also computed the TP53 log-rank test by hand: 271 deaths observed vs 112.13
 expected, χ² = 158.87² / 103.17 = 244.64, the same as `lifelines`.
 
-![Survival by group](figures/fig07_km_groups.png)
-
 **The censoring curve.** G(t), the probability of still being followed, falls to
 **0.198 at 7 years**. A death just before 7 years therefore gets weight
 1/0.198² ≈ **25.6** in the metric, against about 1.5 for a death at 1 year.
 
 **The metric by hand.** On a 6-patient toy example I listed all 9 comparable pairs:
 Harrell's C = 7/9 = **0.778**, and the IPCW C-index = 8.125 / 13.203 = **0.615**.
-Both match `scikit-survival` exactly. The IPCW value is lower because the two
-wrongly ordered pairs start from later deaths, which carry larger weights.
+Both match `scikit-survival` exactly.
 
-**Single-variable baselines** (IPCW C-index, τ = 7, no model fitted):
+**Lesson:** TP53 has a huge log-rank statistic but a C-index of only 0.553. About 75%
+of comparable pairs are tied on a 0/1 score (counted as ½). **Statistical
+significance is not the same as ranking power.**
 
-| Score | IPCW C |
-|---|---|
-| + bone-marrow blasts | 0.616 |
-| − platelets | 0.608 |
-| + number of mutations | 0.605 |
-| − haemoglobin | 0.593 |
-| + TP53 mutated (0/1) | 0.553 |
-| − SF3B1 mutated (0/1) | 0.544 |
-| + monosomy 7 (0/1) | 0.526 |
-| random numbers | 0.509 |
+## Stage 3 — feature engineering
 
-A key lesson: TP53 has a huge log-rank statistic but a C-index of only 0.553.
-Only 11.6% of patients carry it, so most pairs are tied on a 0/1 score (counted as ½).
-**Statistical significance is not the same as ranking power.** Combining variables
-in a model (Stages 4–5) is how we go beyond about 0.62.
+**91 features** in five families:
+
+| Family | Columns | Content |
+|---|---|---|
+| Clinical | 6 | blasts, haemoglobin, log(1+x) of WBC, ANC, monocytes, platelets |
+| Missing flags | 6 | 1 if the clinical value was missing |
+| Cytogenetic | 18 | number of abnormalities, 14 specific lesions, IPSS-R category, missing flag |
+| Molecular summaries | 15 | mutation counts, max VAF, TP53 details, FLT3-ITD, MLL-PTD, 6 pathway counts |
+| Gene indicators | 45 | 1 if the gene is mutated |
+| Clinical score | 1 | IPSS-R score |
+
+**Karyotype parser.** The free text is messy (`{16}`, `[3/20]`, spaces, unbalanced
+brackets, "Normal", "complex", "No mitosis"), so the parser *looks for patterns*
+instead of fully splitting the string. It was tested on 25 hand-written cases, and its
+monosomy 7 count (165) matches Stage 2 exactly.
+
+**A different gene panel in the test centre.** Training has 124 genes and test 83,
+with only **64 shared**. Frequent training genes such as KMT2C, ZBTB33, EP300 and KMT2D
+never appear in the test file, so the test centre most likely did not sequence them.
+All mutation features use only the 64 shared genes. Without this, "number of
+mutations" would mean different things in the two sets. Also, the test file never uses
+the label `splice_site_variant`; its 90 unlabelled mutations are splice variants and
+were relabelled.
+
+**The test centre is much higher risk.** Using the published **IPSS-R** clinical
+score: 33% of test patients are "very high" risk against 11% in training (median score
+5.0 vs 3.0). The test centre also has 31% complex karyotypes against 11%.
+
+![IPSS-R shift](figures/fig12_risk_shift.png)
+
+**A clinical benchmark that needs no fitting.** The IPSS-R score alone reaches an
+**IPCW C-index of 0.668**, better than any raw variable (best 0.616).
+
+![Kaplan-Meier by IPSS-R](figures/fig11_km_ipssr.png)
+
+**Centre-grouped cross-validation.** `StratifiedGroupKFold`, 5 folds × 3 repeats = 15
+validation folds. Every centre sits in exactly one fold (checked in code). The largest
+centre, KI, forms a fold on its own. Evaluated fold by fold, the unfitted IPSS-R score
+gives **0.671 ± 0.030** (range 0.624–0.712). That ±0.03 is pure centre-to-centre noise,
+so a model must beat 0.671 by more than about 0.03 to be convincingly better.
+
+**No leakage from filling missing values.** Missing values stay empty in the feature
+files. From Stage 4 on, the fill-in medians are learned inside each fold, on its
+training part only.
 
 ## Project structure
 
@@ -127,14 +156,17 @@ aml-survival-prediction/
 ├── .gitignore
 ├── data/
 │   ├── raw/            <- the 5 challenge CSV files go here (not on GitHub)
-│   └── processed/      <- cleaned tables created by later stages
+│   └── processed/      <- features_train.csv, features_test.csv, cv_folds.csv,
+│                          feature_groups.json (created by Stage 3, not on GitHub)
 ├── src/
 │   ├── config.py             paths, 7-year horizon, random seed, colours, plot style
 │   ├── load_data.py          functions that read the files
+│   ├── features.py           Stage 3: karyotype parser, clinical/molecular features, IPSS-R
 │   ├── 01_check_setup.py     Stage 0: checks Python, packages and data files
 │   ├── 02_data_audit.py      Stage 1: data audit, 5 figures, 4 tables
 │   ├── 03_kaplan_meier.py    Stage 2: KM by hand, group curves, log-rank, censoring curve
-│   └── 04_cindex_by_hand.py  Stage 2: C-index and IPCW C-index by hand, baselines
+│   ├── 04_cindex_by_hand.py  Stage 2: C-index and IPCW C-index by hand, baselines
+│   └── 05_build_features.py  Stage 3: builds features, checks, IPSS-R, CV folds
 ├── figures/            <- PNG figures (used by the README and the paper)
 ├── results/tables/     <- CSV/TXT summaries
 ├── submissions/        <- files uploaded to Challenge Data (kept local)
@@ -154,6 +186,7 @@ python src/01_check_setup.py
 python src/02_data_audit.py
 python src/03_kaplan_meier.py
 python src/04_cindex_by_hand.py
+python src/05_build_features.py
 ```
 
 **Why `--no-deps` for scikit-survival?** It lists `ecos` as a dependency, but `ecos`
@@ -168,11 +201,19 @@ does not use, so scikit-survival is installed without it.
 | 0 | Setup: repository, packages, data check | ✅ done |
 | 1 | Data audit: linking, outcome, missing values, centres, mutations, cytogenetics | ✅ done |
 | 2 | Kaplan–Meier curves, log-rank tests, C-index and IPCW C-index computed by hand | ✅ done |
-| 3 | Feature engineering: clinical, cytogenetic and mutation features | ⏳ next |
-| 4 | Cox regression (benchmark, ridge/lasso), grouped cross-validation, first submission | ⬜ |
+| 3 | Feature engineering, IPSS-R benchmark, centre-grouped CV folds | ✅ done |
+| 4 | Cox regression (benchmark, ridge/lasso), grouped cross-validation, first submission | ⏳ next |
 | 5 | Machine-learning survival models: gradient-boosted survival, random survival forest | ⬜ |
 | 6 | Model comparison, ensemble, interpretation, final submission | ⬜ |
 | 7 | Final write-up | ⬜ |
+
+## Results so far (IPCW C-index, τ = 7 years)
+
+| Score | All training patients | Centre-grouped CV (15 folds) |
+|---|---|---|
+| Random numbers | 0.509 | — |
+| Best raw variable (bone-marrow blasts) | 0.616 | — |
+| IPSS-R clinical score (no fitting) | 0.668 | 0.671 ± 0.030 |
 
 ## Leaderboard submissions
 
@@ -189,6 +230,10 @@ does not use, so scikit-survival is installed without it.
 - Harrell F. E. *et al.* (1982). Evaluating the yield of medical tests. *JAMA* 247(18).
 - Uno H. *et al.* (2011). On the C-statistics for evaluating overall adequacy of risk
   prediction procedures with censored survival data. *Statistics in Medicine* 30(10).
+- Greenberg P. L. *et al.* (2012). Revised International Prognostic Scoring System for
+  myelodysplastic syndromes. *Blood* 120(12).
+- Schanz J. *et al.* (2012). New comprehensive cytogenetic scoring system for primary
+  myelodysplastic syndromes. *Journal of Clinical Oncology* 30(8).
 - Noren D. P. *et al.* (2016). A crowdsourcing approach to developing and assessing
   prediction algorithms for AML prognosis. *PLOS Computational Biology* 12(6): e1004890.
 - Pölsterl S. (2020). scikit-survival: a library for time-to-event analysis built on

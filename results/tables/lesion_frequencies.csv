@@ -1,0 +1,15 @@
+,train_pct,test_pct
+cyto_missing,11.0,10.1
+cyto_normal,58.2,38.2
+cyto_complex,10.9,31.3
+cyto_monosomal,8.3,23.7
+cyto_minus7,5.8,13.3
+cyto_del7q,1.9,3.4
+cyto_del5q,11.3,10.1
+cyto_minus5,2.1,6.8
+cyto_plus8,8.1,12.3
+cyto_del20q,4.0,8.1
+cyto_minusY,4.7,6.9
+cyto_17p,2.1,7.4
+cyto_3q,1.0,0.8
+tp53_multihit,6.7,18.9

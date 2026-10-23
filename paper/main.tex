@@ -24,7 +24,7 @@
 Kaplan--Meier, Cox Regression and Machine-Learning Survival Models}
 \author{Bernard Frimpong\\
 \small M.S. Applied Mathematics, University of Akron}
-\date{Working draft --- Stage 2 (Kaplan--Meier and the metric), October 2026}
+\date{Working draft --- Stage 3 (feature engineering), October 2026}
 
 \begin{document}
 \maketitle
@@ -41,8 +41,12 @@ sicker, so model validation will hold out whole centres. Kaplan--Meier analysis 
 median overall survival of 3.15 years, with strong separation by bone-marrow blasts,
 \textit{TP53} and \textit{SF3B1} mutations and monosomy~7 (log-rank $p<0.001$ for all).
 The Kaplan--Meier estimator, a log-rank test and both concordance indices were computed
-by hand and match standard software. Single variables reach an IPCW C-index of at most
-0.616, which is the baseline that multivariable models must beat.
+by hand and match standard software. Single raw variables reach an IPCW C-index of at
+most 0.616. I then built 91 features from blood counts, a forgiving parser of the
+free-text karyotypes, and somatic mutations restricted to the 64 genes sequenced in both
+centres. The published IPSS-R clinical risk score, which needs no fitting, reaches an
+IPCW C-index of 0.668 (0.671 $\pm$ 0.030 across centre-grouped validation folds) and is
+the benchmark for the models that follow.
 \end{abstract}
 
 % ==================================================================
@@ -588,14 +592,287 @@ Statistical significance and ranking power are different things. Third, no singl
 variable exceeds about 0.62, so combining them in a multivariable model is necessary.
 
 % ==================================================================
+\section{Feature engineering (Stage 3)}
+% ==================================================================
+Ninety-one features were built in five families (Table~\ref{tab:families}). Every
+feature is computed from one patient's own data, except two fixed choices that use only
+the predictors and never the outcome: the gene panel and the IPSS-R fill-in points.
+Missing clinical values are deliberately left empty at this stage, because the value
+used to fill them must be learned inside each cross-validation fold
+(Section~\ref{sec:cv}).
+
+\begin{table}[H]
+\centering
+\caption{Feature families.}
+\label{tab:families}
+\begin{tabular}{lrl}
+\toprule
+Family & Columns & Content \\
+\midrule
+Clinical            & 6  & blasts, haemoglobin, $\log(1+x)$ of 4 blood counts \\
+Missing flags       & 6  & 1 if the clinical value was missing \\
+Cytogenetic         & 18 & abnormality count, 14 lesions, IPSS-R category, missing \\
+Molecular summaries & 15 & counts, VAF, TP53, FLT3-ITD, MLL-PTD, 6 pathways \\
+Gene indicators     & 45 & 1 if the gene is mutated \\
+Clinical score      & 1  & IPSS-R score \\
+\midrule
+Total               & 91 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Clinical features}
+Blood counts are strongly right-skewed (Figure~\ref{fig:dist}), so white cells,
+neutrophils, monocytes and platelets enter as $\log(1+x)$; the ``$1+$'' keeps recorded
+zeros finite. Blasts and haemoglobin are kept on their original scale. Each of the six
+variables also gets a 0/1 ``was missing'' flag.
+
+\subsection{Parsing the karyotype}
+A karyotype such as \texttt{46,xy,del(20)(q12)[2]/46,xy[18]} lists clones separated by
+``\texttt{/}'', each with a chromosome count, the sex chromosomes, the abnormalities and
+a cell count in square brackets. Numerical changes are written \texttt{-7} (loss of
+chromosome~7) or \texttt{+8} (an extra chromosome~8); structural changes as
+\texttt{del}, \texttt{t}, \texttt{inv}, \texttt{der}, \texttt{add}, \texttt{i} and so on,
+and unidentified marker chromosomes as \texttt{mar}.
+
+The text is irregular, especially in the test centre: upper and lower case, spaces,
+\texttt{\{16\}} or \texttt{[3/20]} cell counts, unbalanced brackets, and free text such as
+\texttt{Normal}, \texttt{complex} or \texttt{No mitosis}. The parser therefore searches for
+patterns instead of fully splitting the string:
+\begin{enumerate}
+  \item lower-case the text, remove spaces, and convert \texttt{\{\}} to \texttt{[]};
+  \item map free text: \texttt{Normal} to a normal karyotype, \texttt{complex} to at least
+        three abnormalities, \texttt{>3 abnormalities} to four, and \texttt{No mitosis} or
+        \texttt{Not evaluated} to missing;
+  \item delete cell counts, then collect the distinct numerical changes, the distinct
+        structural changes and any marker chromosome across all clones;
+  \item do not count a translocation that only describes how a derivative chromosome
+        was formed (\texttt{der(1)t(1;7)} is one abnormality), nor the common harmless
+        variant \texttt{inv(9)(p12q13)}.
+\end{enumerate}
+The parser was checked on 25 hand-written test strings covering these cases, and its
+monosomy~7 count (165 patients) agrees exactly with the simpler rule used in Stage~2.
+From the parsed karyotype the patient is assigned an IPSS-R cytogenetic
+category~\cite{schanz2012} (Table~\ref{tab:cytocat}).
+
+\begin{table}[H]
+\centering
+\caption{IPSS-R cytogenetic categories as implemented.}
+\label{tab:cytocat}
+\begin{tabular}{cll}
+\toprule
+Points & Category & Karyotype \\
+\midrule
+0 & Very good    & $-$Y alone; del(11q) alone \\
+1 & Good         & normal; del(5q), del(12p) or del(20q) alone; two including del(5q) \\
+2 & Intermediate & del(7q) alone, $+8$, $+19$, any other one or two abnormalities \\
+3 & Poor         & $-7$; inv(3)/t(3;3)/del(3q); two including $-7$/del(7q); exactly three \\
+4 & Very poor    & more than three abnormalities \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:lesions} compares lesion frequencies. The test centre has nearly three times
+the training rate of complex karyotypes (31.3\% against 10.9\%) and of TP53 multi-hit
+status, defined as two or more TP53 mutations, a TP53 VAF of at least 0.5, or a TP53
+mutation together with a 17p loss (18.9\% against 6.7\%).
+
+\begin{table}[H]
+\centering
+\caption{Lesion frequencies (\% of patients with a usable karyotype; the first and last
+rows are \% of all patients).}
+\label{tab:lesions}
+\begin{tabular}{lrr}
+\toprule
+Lesion & Train & Test \\
+\midrule
+Karyotype missing or unusable & 11.0 & 10.1 \\
+Normal karyotype              & 58.2 & 38.2 \\
+Complex ($\ge 3$ abnormalities) & 10.9 & 31.3 \\
+Monosomal karyotype           & 8.3  & 23.7 \\
+Monosomy 7                    & 5.8  & 13.3 \\
+del(5q)                       & 11.3 & 10.1 \\
+Trisomy 8                     & 8.1  & 12.3 \\
+17p loss                      & 2.1  & 7.4 \\
+TP53 multi-hit                & 6.7  & 18.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Mutation features and the shared gene panel}
+The training file contains 124 genes and the test file 83, of which only 64 appear in
+both. Several genes frequent in training never appear in the test file, notably
+\textit{KMT2C} (56 patients), \textit{ZBTB33} (45), \textit{EP300} (43) and
+\textit{KMT2D} (32), which strongly suggests that the test centre used a smaller
+sequencing panel. If these genes were counted, ``number of mutations'' would mean
+something different in the two sets. All mutation features therefore use only the 64
+shared genes; this removes 598 training mutations. A second mismatch was found: the test
+file never uses the label \texttt{splice\_site\_variant}, while 90 of its mutations have no
+effect label and are written in splice-site notation (\texttt{c.307+1G>A}); these were
+relabelled as splice-site variants.
+
+The molecular features are: the number of mutations and of mutated genes, the maximum
+VAF, the number of truncating mutations (frameshift, stop-gained, splice-site), the
+number and maximum VAF of TP53 mutations, TP53 multi-hit status, FLT3 internal tandem
+duplication, MLL partial tandem duplication, six pathway counts (splicing, DNA
+methylation, chromatin, signalling, cohesin, transcription factors), and a 0/1 indicator
+for each of the 45 shared genes mutated in at least 1\% (32) of training patients.
+Patients with no mutation receive zeros: ``no mutation found'' is information, not a
+missing value.
+
+\subsection{The IPSS-R score: a clinical benchmark}
+The revised International Prognostic Scoring System (IPSS-R)~\cite{greenberg2012} is the
+standard clinical risk score for myelodysplastic syndromes, the dominant condition in
+this cohort (median blasts 3\%). It adds points for five components:
+\begin{center}
+\begin{tabular}{lccccc}
+\toprule
+Points & 0 & 0.5 & 1 & 1.5 & 2--4 \\
+\midrule
+Cytogenetics & very good & -- & good & -- & 2 int., 3 poor, 4 very poor \\
+Blasts (\%)  & $\le 2$ & -- & $(2,5)$ & -- & 2 if 5--10, 3 if $>10$ \\
+Haemoglobin (g/dL) & $\ge 10$ & -- & 8--$<$10 & $<8$ & -- \\
+Platelets (G/L) & $\ge 100$ & 50--$<$100 & $<50$ & -- & -- \\
+ANC (G/L) & $\ge 0.8$ & $<0.8$ & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{center}
+For example, a patient with a good karyotype (1 point), 7\% blasts (2), haemoglobin
+9.1 g/dL (1), platelets 45 G/L (1) and ANC 1.2 G/L (0) scores $1+2+1+1+0 = 5$, the
+``high'' group. A missing component receives the median points of the training patients
+(1 for cytogenetics, blasts and haemoglobin; 0 for platelets and ANC). This uses no
+outcome information. Groups are very low ($\le 1.5$), low $(1.5, 3]$, intermediate
+$(3, 4.5]$, high $(4.5, 6]$ and very high ($> 6$).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig11_km_ipssr.png}
+\caption{Kaplan--Meier curves by IPSS-R cytogenetic category (left) and by IPSS-R risk
+group (right) in the training data. Darker blue means higher risk.}
+\label{fig:kmipssr}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Survival by IPSS-R group in the training data.}
+\label{tab:kmipssr}
+\begin{tabular}{llrrr}
+\toprule
+Grouping & Group & $n$ & Median (y) & $\hat S(3)$ \\
+\midrule
+Cytogenetic category & Very good    & 109  & 4.44 & 0.636 \\
+($\chi^2 = 513.8$)   & Good         & 1913 & 4.28 & 0.606 \\
+                     & Intermediate & 393  & 2.26 & 0.432 \\
+                     & Poor         & 177  & 1.28 & 0.217 \\
+                     & Very poor    & 231  & 0.84 & 0.076 \\
+\midrule
+Risk group           & Very low     & 480  & 7.18 & 0.762 \\
+($\chi^2 = 737.4$)   & Low          & 1209 & 4.56 & 0.654 \\
+                     & Intermediate & 662  & 2.65 & 0.462 \\
+                     & High         & 459  & 1.52 & 0.270 \\
+                     & Very high    & 363  & 0.86 & 0.101 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both groupings separate survival cleanly and in the expected order
+(Figure~\ref{fig:kmipssr}, Table~\ref{tab:kmipssr}). The full score separates better
+than cytogenetics alone ($\chi^2$ 737.4 against 513.8), confirming that blasts and blood
+counts add information. Figure~\ref{fig:shift} applies the same score to the test centre:
+33\% of its patients are very high risk against 11\% in training, and the median score is
+5.0 against 3.0.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig12_risk_shift.png}
+\caption{Share of patients in each IPSS-R risk group, training versus test.}
+\label{fig:shift}
+\end{figure}
+
+\subsection{Single-feature concordance}
+Figure~\ref{fig:featc} ranks features by their IPCW C-index when used alone (missing
+values filled with the median for this exploratory look only). The IPSS-R score is the
+strongest at 0.668, ahead of blasts (0.616) and the number of mutated genes (0.613).
+Platelets, haemoglobin, a normal karyotype and \textit{SF3B1} mutation are protective
+($C < 0.5$). Composite features such as counts and pathway sums rank better than single
+genes, for the tie-breaking reason found in Stage~2.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig13_feature_cindex.png}
+\caption{IPCW C-index of the 25 most informative features used alone. Orange: higher
+values go with shorter survival; blue: with longer survival.}
+\label{fig:featc}
+\end{figure}
+
+\subsection{Centre-grouped cross-validation}
+\label{sec:cv}
+Folds are built with stratified group $K$-fold ($K = 5$): all patients of one centre are
+placed in the same fold, so each validation fold contains only centres unseen during
+training, while the share of deaths is kept as similar as possible across folds. Because
+there are only 23 centres, the split is repeated three times with different random seeds,
+giving 15 validation folds. A check confirms that no centre is split across folds.
+Table~\ref{tab:folds} shows the first repetition; the largest centre, \texttt{KI}, forms a
+fold on its own.
+
+\begin{table}[H]
+\centering
+\caption{Folds of the first repetition and the IPCW C-index of the (unfitted) IPSS-R score
+on each validation fold.}
+\label{tab:folds}
+\small
+\begin{tabular}{rrrrp{4.2cm}r}
+\toprule
+Fold & Patients & Centres & Death rate & Centre names & IPSS-R $C_7$ \\
+\midrule
+0 & 820 & 1 & 0.61 & KI & 0.662 \\
+1 & 500 & 4 & 0.35 & DUTH HIAE ICO PV & 0.712 \\
+2 & 664 & 7 & 0.55 & DUS MSK REL TUD UMG UOXF VU & 0.624 \\
+3 & 610 & 7 & 0.50 & FLO FUCE HMS IHBT MUV RMCN ROM & 0.670 \\
+4 & 579 & 4 & 0.44 & CCH CGM GESMD UOB & 0.687 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The IPSS-R score is not fitted, so its variation across folds measures pure
+centre-to-centre noise. Over all 15 folds its IPCW C-index is
+$0.671 \pm 0.030$ (range 0.624--0.712), against 0.668 on all patients together. Any
+model must therefore beat the IPSS-R by clearly more than about 0.03 before the gain can
+be trusted.
+
+\paragraph{Filling missing values inside the folds.} The median used to fill a missing
+value must be computed on the training part of each fold only. Otherwise the validation
+patients would help choose the fill-in value, a small leak of information from the data
+used to judge the model. Table~\ref{tab:foldmed} shows that these medians differ slightly
+between folds; Stage~4 will learn them inside each fold with a
+\texttt{scikit-learn} pipeline.
+
+\begin{table}[H]
+\centering
+\caption{Medians computed on the training part of each fold (repetition 0).}
+\label{tab:foldmed}
+\begin{tabular}{lrrrr}
+\toprule
+Fold & Blasts & Haemoglobin & $\log(1+\text{PLT})$ & $\log(1+\text{monocytes})$ \\
+\midrule
+0 & 3.0 & 9.6 & 4.820 & 0.301 \\
+1 & 3.0 & 9.6 & 4.844 & 0.295 \\
+2 & 3.0 & 9.7 & 4.828 & 0.336 \\
+3 & 3.5 & 9.8 & 4.812 & 0.316 \\
+4 & 3.0 & 9.8 & 4.796 & 0.322 \\
+All patients & 3.0 & 9.7 & 4.820 & 0.315 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ==================================================================
 \section{Next steps}
 % ==================================================================
-Stage 3 will build features: clinical transforms and missing-value handling,
-cytogenetic indicators parsed from the normalised karyotype text (normal karyotype,
-monosomy~7, deletion 5q, complex karyotype and others), and mutation features (gene
-indicators, number of mutations, maximum VAF). All steps that learn from data will be
-fitted inside cross-validation folds. Stage 4 will then fit Cox models under
-centre-grouped cross-validation and produce the first submission.
+Stage 4 will fit Cox proportional hazards models: first a reproduction of the challenge's
+benchmark Cox model, then penalised (ridge, lasso, elastic-net) Cox models on the new
+features. Imputation and scaling will be learned inside each of the 15 centre-grouped
+folds, the proportional-hazards assumption will be checked, and the first submission will
+be made. The target to beat is the IPSS-R score at $0.671 \pm 0.030$.
 
 % ==================================================================
 \begin{thebibliography}{9}
@@ -637,6 +914,18 @@ consideration,
 C.~Davidson-Pilon,
 lifelines: survival analysis in Python,
 \textit{Journal of Open Source Software}, 4(40): 1317, 2019.
+
+\bibitem{greenberg2012}
+P.~L. Greenberg \textit{et al.},
+Revised International Prognostic Scoring System for myelodysplastic syndromes,
+\textit{Blood}, 120(12): 2454--2465, 2012.
+
+\bibitem{schanz2012}
+J.~Schanz \textit{et al.},
+New comprehensive cytogenetic scoring system for primary myelodysplastic syndromes (MDS)
+and oligoblastic acute myeloid leukemia after MDS derived from an international database
+merge,
+\textit{Journal of Clinical Oncology}, 30(8): 820--829, 2012.
 
 \end{thebibliography}
 
