@@ -1,0 +1,4 @@
+comparison,question,mean_diff,sd_diff,folds_won
+C - B,clinical feature set vs benchmark,0.0278,0.0144,14/15
+D - C,84 penalised features vs 24 chosen,0.0059,0.0086,10/15
+E - D,adding monocytes + missing flags,-0.0004,0.0011,4/15

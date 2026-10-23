@@ -1,0 +1,5 @@
+quartile,patients,median_years,S_at_3_years,S_at_7_years
+Q1 (lowest risk),795,8.28,0.834,0.564
+Q2,793,4.4,0.643,0.326
+Q3,791,2.42,0.431,0.157
+Q4 (highest risk),794,1.07,0.13,0.057

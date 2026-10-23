@@ -40,7 +40,6 @@ import numpy as np
 import pandas as pd
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import multivariate_logrank_test
-from sklearn.model_selection import StratifiedGroupKFold
 from sksurv.util import Surv
 from sksurv.metrics import concordance_index_ipcw
 
@@ -302,39 +301,71 @@ plt.close(fig)
 # ===========================================================================
 # 7. Cross-validation folds grouped by centre
 # ===========================================================================
-# StratifiedGroupKFold:
-#   - "Group": all patients of one centre go to the SAME fold, so every
-#     validation fold contains only centres the model has not seen.
-#   - "Stratified": tries to keep the share of deaths similar in each fold.
-#   - shuffle + a different random_state per repeat gives 3 different splits.
-# We repeat 3 times because with only 23 centres one split is noisy.
+# Rule: all patients of one centre go to the SAME fold, so every validation
+# fold contains only centres the model has not seen during training.
+#
+# How the centres are dealt into 5 folds (like dealing cards):
+#   1. put the 23 centres in a RANDOM order,
+#   2. take them one by one and give each to the fold that currently has
+#      the FEWEST patients (this keeps the folds roughly the same size).
+# A different random order per repeat gives a genuinely different split.
+#
+# (Note, fixed in Stage 4: the first version used sklearn's
+#  StratifiedGroupKFold(shuffle=True). With only 23 centres it sorts the
+#  centres before shuffling has any effect, so all 3 "repeats" came out
+#  IDENTICAL. The check at the end of this block now guards against that.)
 N_SPLITS, N_REPEATS = 5, 3
+
+
+def deal_centres_into_folds(centre_sizes, n_splits, rng):
+    """Return {centre: fold number}, dealing centres in a random order."""
+    order = rng.permutation(centre_sizes.index.to_numpy())   # random order of centres
+    fold_size = np.zeros(n_splits)                           # patients per fold so far
+    assignment = {}
+    for centre in order:
+        k = int(np.argmin(fold_size))                        # the smallest fold so far
+        assignment[centre] = k
+        fold_size[k] += centre_sizes[centre]
+    return assignment
+
+
+centre_sizes = X_train["CENTER"].value_counts()
 folds = pd.DataFrame({"ID": X_train.index, "CENTER": X_train["CENTER"].to_numpy()})
+rng = np.random.default_rng(config.SEED)
 for r in range(N_REPEATS):
-    sgkf = StratifiedGroupKFold(n_splits=N_SPLITS, shuffle=True, random_state=config.SEED + r)
-    fold_of = np.empty(len(X_train), dtype=int)
-    for k, (_, valid_idx) in enumerate(sgkf.split(X_train, X_train["OS_STATUS"], groups=X_train["CENTER"])):
-        fold_of[valid_idx] = k
-    folds[f"repeat{r}"] = fold_of
+    assignment = deal_centres_into_folds(centre_sizes, N_SPLITS, rng)
+    folds[f"repeat{r}"] = folds["CENTER"].map(assignment)
 folds.to_csv(config.DATA_PROCESSED / "cv_folds.csv", index=False)
 
-# Check: no centre appears in two folds of the same repeat.
+# Check 1: no centre appears in two folds of the same repeat.
 for r in range(N_REPEATS):
     assert folds.groupby("CENTER")[f"repeat{r}"].nunique().max() == 1, "a centre is split!"
-print("\nCheck passed: every centre sits in exactly one fold, in every repeat.")
+
+
+# Check 2: the repeats really are different splits. A split is described by
+# which centres end up together; two repeats are identical if they produce
+# the same set of centre groups.
+def partition(r):
+    return sorted(sorted(c) for c in folds.groupby(f"repeat{r}")["CENTER"].unique())
+
+
+for r in range(1, N_REPEATS):
+    assert partition(r) != partition(0), f"repeat {r} is identical to repeat 0!"
+print("\nChecks passed: every centre sits in exactly one fold, and the 3 repeats are different splits.")
 
 summary_rows = []
-for k in range(N_SPLITS):
-    in_fold = folds["repeat0"] == k
-    sub = X_train[in_fold.to_numpy()]
-    summary_rows.append({
-        "fold": k, "patients": len(sub), "centres": sub["CENTER"].nunique(),
-        "death_rate": round(sub["OS_STATUS"].mean(), 2),
-        "centre_list": " ".join(sorted(sub["CENTER"].unique())),
-    })
+for r in range(N_REPEATS):
+    for k in range(N_SPLITS):
+        in_fold = folds[f"repeat{r}"] == k
+        sub = X_train[in_fold.to_numpy()]
+        summary_rows.append({
+            "repeat": r, "fold": k, "patients": len(sub), "centres": sub["CENTER"].nunique(),
+            "death_rate": round(sub["OS_STATUS"].mean(), 2),
+            "centre_list": " ".join(sorted(sub["CENTER"].unique())),
+        })
 fold_summary = pd.DataFrame(summary_rows)
 fold_summary.to_csv(config.TABLES / "fold_summary.csv", index=False)
-print("Repeat 0 folds:")
+print("Folds of all 3 repeats:")
 print(fold_summary.to_string(index=False))
 
 # ---- IPSS-R score evaluated fold by fold ------------------------------------

@@ -1,0 +1,25 @@
+variable,unit,HR,lower_95,upper_95,p_value
+BM_BLAST,per 1 SD,1.166,1.109,1.226,2.1e-09
+HB,per 1 SD,0.768,0.728,0.81,2.0e-22
+log_WBC,per 1 SD,0.99,0.884,1.108,8.6e-01
+log_ANC,per 1 SD,1.081,0.967,1.208,1.7e-01
+log_PLT,per 1 SD,0.832,0.788,0.878,2.5e-11
+cyto_ipssr_cat,per step,1.344,1.258,1.437,2.8e-18
+ipssm_residual,per step,1.205,1.113,1.304,4.2e-06
+cyto_missing,yes vs no,1.447,1.241,1.686,2.3e-06
+mut_ASXL1,yes vs no,1.323,1.168,1.499,1.1e-05
+mut_CBL,yes vs no,1.445,1.18,1.77,3.8e-04
+mut_DNMT3A,yes vs no,1.317,1.149,1.51,8.0e-05
+mut_ETV6,yes vs no,1.41,1.057,1.881,1.9e-02
+mut_EZH2,yes vs no,1.338,1.105,1.62,2.8e-03
+mut_FLT3,yes vs no,1.645,1.133,2.389,9.0e-03
+mut_IDH2,yes vs no,1.162,0.933,1.448,1.8e-01
+mut_KRAS,yes vs no,1.256,0.987,1.6,6.4e-02
+mol_MLL_PTD,yes vs no,2.046,1.544,2.712,6.3e-07
+mut_NPM1,yes vs no,0.742,0.487,1.131,1.6e-01
+mut_NRAS,yes vs no,1.337,1.092,1.636,4.8e-03
+mut_RUNX1,yes vs no,1.418,1.227,1.639,2.2e-06
+mut_SF3B1,yes vs no,1.018,0.882,1.176,8.1e-01
+mut_SRSF2,yes vs no,1.421,1.224,1.65,4.0e-06
+tp53_multihit,yes vs no,3.21,2.591,3.977,1.4e-26
+mut_U2AF1,yes vs no,1.254,1.054,1.493,1.1e-02

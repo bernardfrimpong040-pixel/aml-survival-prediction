@@ -24,7 +24,7 @@
 Kaplan--Meier, Cox Regression and Machine-Learning Survival Models}
 \author{Bernard Frimpong\\
 \small M.S. Applied Mathematics, University of Akron}
-\date{Working draft --- Stage 3 (feature engineering), October 2026}
+\date{Working draft --- Stage 4 (Cox regression), October 2026}
 
 \begin{document}
 \maketitle
@@ -45,8 +45,13 @@ by hand and match standard software. Single raw variables reach an IPCW C-index 
 most 0.616. I then built 91 features from blood counts, a forgiving parser of the
 free-text karyotypes, and somatic mutations restricted to the 64 genes sequenced in both
 centres. The published IPSS-R clinical risk score, which needs no fitting, reaches an
-IPCW C-index of 0.668 (0.671 $\pm$ 0.030 across centre-grouped validation folds) and is
-the benchmark for the models that follow.
+IPCW C-index of 0.669 $\pm$ 0.029 across 15 centre-grouped validation folds. Cox models
+evaluated on the same folds improve on it: a 24-variable model built from the IPSS-M
+gene list reaches 0.716 and an elastic-net Cox model on 84 features 0.722, each beating
+the IPSS-R on all 15 folds. Monocyte counts, missing in 74\% of test patients, add
+nothing. Hazard ratios agree with clinical knowledge (TP53 multi-hit HR 3.2), and the
+proportional-hazards assumption is violated mainly by \textit{NPM1} and platelets, whose
+effects change over time.
 \end{abstract}
 
 % ==================================================================
@@ -807,13 +812,20 @@ values go with shorter survival; blue: with longer survival.}
 
 \subsection{Centre-grouped cross-validation}
 \label{sec:cv}
-Folds are built with stratified group $K$-fold ($K = 5$): all patients of one centre are
-placed in the same fold, so each validation fold contains only centres unseen during
-training, while the share of deaths is kept as similar as possible across folds. Because
-there are only 23 centres, the split is repeated three times with different random seeds,
-giving 15 validation folds. A check confirms that no centre is split across folds.
-Table~\ref{tab:folds} shows the first repetition; the largest centre, \texttt{KI}, forms a
-fold on its own.
+All patients of one centre are placed in the same fold, so each validation fold contains
+only centres unseen during training. The 23 centres are dealt into $K = 5$ folds like
+cards: they are put in a random order, and each in turn goes to the fold that currently
+has the fewest patients, which keeps the folds of similar size. Because there are only 23
+centres, the split is repeated three times with different random orders, giving 15
+validation folds. Two checks run in the code: no centre is split across folds, and the
+three repetitions are genuinely different partitions of the centres.
+
+\paragraph{A bug found and fixed.} The first version used \texttt{scikit-learn}'s
+\texttt{StratifiedGroupKFold} with \texttt{shuffle=True} and a different seed per repetition.
+The plot of fold scores in Stage~4 showed every value exactly three times: with only 23
+groups, that splitter sorts the groups by their outcome profile before shuffling has any
+effect, so all three ``repetitions'' were the same five folds. The dealing procedure above
+replaced it, and the second check now guards against a repeat of the problem.
 
 \begin{table}[H]
 \centering
@@ -825,20 +837,20 @@ on each validation fold.}
 \toprule
 Fold & Patients & Centres & Death rate & Centre names & IPSS-R $C_7$ \\
 \midrule
-0 & 820 & 1 & 0.61 & KI & 0.662 \\
-1 & 500 & 4 & 0.35 & DUTH HIAE ICO PV & 0.712 \\
-2 & 664 & 7 & 0.55 & DUS MSK REL TUD UMG UOXF VU & 0.624 \\
-3 & 610 & 7 & 0.50 & FLO FUCE HMS IHBT MUV RMCN ROM & 0.670 \\
-4 & 579 & 4 & 0.44 & CCH CGM GESMD UOB & 0.687 \\
+0 & 476 & 5 & 0.45 & DUTH ICO MSK RMCN ROM & 0.675 \\
+1 & 893 & 2 & 0.61 & FUCE KI & 0.659 \\
+2 & 478 & 6 & 0.38 & CCH CGM FLO HIAE UOB VU & 0.729 \\
+3 & 747 & 4 & 0.58 & DUS GESMD HMS REL & 0.629 \\
+4 & 579 & 6 & 0.40 & IHBT MUV PV TUD UMG UOXF & 0.679 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The IPSS-R score is not fitted, so its variation across folds measures pure
 centre-to-centre noise. Over all 15 folds its IPCW C-index is
-$0.671 \pm 0.030$ (range 0.624--0.712), against 0.668 on all patients together. Any
-model must therefore beat the IPSS-R by clearly more than about 0.03 before the gain can
-be trusted.
+$0.669 \pm 0.029$ (range 0.624--0.729), against 0.668 on all patients together. A
+difference in mean C-index of less than about 0.03 between two models is therefore not
+convincing by itself; the fair comparison is fold by fold (Section~\ref{sec:cox}).
 
 \paragraph{Filling missing values inside the folds.} The median used to fill a missing
 value must be computed on the training part of each fold only. Otherwise the validation
@@ -855,27 +867,291 @@ between folds; Stage~4 will learn them inside each fold with a
 \toprule
 Fold & Blasts & Haemoglobin & $\log(1+\text{PLT})$ & $\log(1+\text{monocytes})$ \\
 \midrule
-0 & 3.0 & 9.6 & 4.820 & 0.301 \\
-1 & 3.0 & 9.6 & 4.844 & 0.295 \\
-2 & 3.0 & 9.7 & 4.828 & 0.336 \\
-3 & 3.5 & 9.8 & 4.812 & 0.316 \\
-4 & 3.0 & 9.8 & 4.796 & 0.322 \\
-All patients & 3.0 & 9.7 & 4.820 & 0.315 \\
+0 & 3.0 & 9.70 & 4.796 & 0.316 \\
+1 & 3.0 & 9.60 & 4.828 & 0.300 \\
+2 & 3.0 & 9.78 & 4.836 & 0.329 \\
+3 & 3.0 & 9.70 & 4.796 & 0.313 \\
+4 & 3.0 & 9.60 & 4.844 & 0.301 \\
+All patients & 3.0 & 9.70 & 4.820 & 0.315 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 % ==================================================================
-\section{Next steps}
+\section{Cox regression (Stage 4)}
+\label{sec:cox}
 % ==================================================================
-Stage 4 will fit Cox proportional hazards models: first a reproduction of the challenge's
-benchmark Cox model, then penalised (ridge, lasso, elastic-net) Cox models on the new
-features. Imputation and scaling will be learned inside each of the 15 centre-grouped
-folds, the proportional-hazards assumption will be checked, and the first submission will
-be made. The target to beat is the IPSS-R score at $0.671 \pm 0.030$.
+
+\subsection{The Cox proportional hazards model}
+The \emph{hazard} $h(t)$ is the instantaneous risk of death at time $t$ for someone still
+alive at $t$. The Cox model~\cite{cox1972} writes the hazard of a patient with features
+$x = (x_1, \dots, x_p)$ as
+\begin{equation}
+h(t \mid x) = h_0(t)\, \exp\!\left(\beta_1 x_1 + \dots + \beta_p x_p\right),
+\label{eq:cox}
+\end{equation}
+where $h_0(t)$ is a baseline hazard shared by everyone and left completely unspecified.
+In plain language: every patient's risk curve has the same shape over time, scaled up or
+down by a patient-specific factor $\exp(\beta^\top x)$. The ratio of two patients' hazards
+therefore does not depend on $t$ (the \emph{proportional hazards} assumption), and
+$e^{\beta_k}$ is the \emph{hazard ratio} (HR) for a one-unit increase in $x_k$ with the
+other features held fixed. The linear predictor $\eta = \beta^\top x$ is exactly the risk
+score the challenge asks for.
+
+The coefficients are found by maximising the \emph{partial likelihood}
+\begin{equation}
+L(\beta) = \prod_{i:\ \Delta_i = 1}
+\frac{\exp(\beta^\top x_i)}{\sum_{j:\ T_j \ge T_i} \exp(\beta^\top x_j)}.
+\label{eq:partial}
+\end{equation}
+Each factor asks: of all patients still at risk when patient $i$ died, how likely was it
+to be patient $i$? Censored patients appear in the denominators while they are at risk,
+which is how the model uses them, and $h_0(t)$ cancels out.
+
+\paragraph{Worked example.} TP53 multi-hit has HR 3.21 in the model below, so its
+coefficient is $\ln 3.21 = 1.166$. Haemoglobin has HR 0.768 per standard deviation (2.0
+g/dL), so $\beta = \ln 0.768 = -0.264$. A patient with TP53 multi-hit whose haemoglobin is
+one standard deviation \emph{below} average, all else equal, has
+\[
+\text{HR} = \exp\!\big(1.166 - (-0.264)\big) = \exp(1.430) = 4.18
+= 3.21 \times \frac{1}{0.768},
+\]
+that is, about four times the instantaneous risk of death of an otherwise average patient.
+
+\subsection{Penalised Cox: the elastic net}
+With 84 features, some rare, ordinary maximisation of Equation~\eqref{eq:partial}
+over-fits. The elastic net~\cite{zou2005,simon2011} instead maximises
+\begin{equation}
+\ln L(\beta) \;-\; \alpha\left(\rho \sum_k |\beta_k| + \frac{1-\rho}{2}\sum_k \beta_k^2\right),
+\label{eq:enet}
+\end{equation}
+where $\alpha > 0$ sets the overall strength of the penalty and $\rho \in (0, 1]$ the mix:
+$\rho = 1$ is the lasso, which sets many coefficients exactly to zero, and small $\rho$ is
+close to ridge regression, which shrinks all coefficients towards zero without removing
+them. Features are standardised first so the penalty treats them equally.
+
+\paragraph{Nested cross-validation.} $\alpha$ and $\rho$ must be chosen without looking at
+the validation fold. Inside each outer training set, an inner four-fold split, also
+grouped by centre, scores 30 values of $\alpha$ for each $\rho \in \{0.1, 0.5, 1\}$; the
+best pair is refitted on the whole outer training set and only then applied to the outer
+validation fold. Missing values are filled with medians and features are standardised
+inside a \texttt{scikit-learn} pipeline, so these steps are also learned only on the data
+the model is trained on.
+
+\subsection{Models compared}
+All models are evaluated on the same 15 centre-grouped validation folds, with the
+censoring curve $\hat G$ of the metric estimated on each fold's training part:
+\begin{description}
+  \item[A. IPSS-R score] the published score, no fitting (reference).
+  \item[B. Benchmark-style Cox] blasts, haemoglobin, platelets and the number of mutations.
+        The challenge's benchmark notebook is available only to registered participants;
+        this is my reconstruction from the challenge description and may differ in detail.
+  \item[C. IPSS-M-style Cox] the five blood values, the IPSS-R cytogenetic category, a
+        flag for a missing karyotype, the 16 ``main effect'' genes of the IPSS-M
+        molecular score~\cite{bernard2022} (including TP53 multi-hit and MLL-PTD), and
+        the number of mutated IPSS-M ``residual'' genes capped at 2. These 24 variables
+        come from the literature, not from this data. A very small ridge penalty (0.1)
+        keeps the fit stable.
+  \item[D. Elastic-net Cox] all 84 features except monocytes and the missing flags.
+  \item[E. Elastic-net Cox $+$] D plus log monocytes and the six missing flags.
+\end{description}
+
+\subsection{Cross-validated results}
+
+\begin{table}[H]
+\centering
+\caption{IPCW C-index ($\tau = 7$) over 15 centre-grouped validation folds. ``Paired'' is
+the mean over folds of (model C $-$ IPSS-R C on the same fold).}
+\label{tab:coxcv}
+\small
+\begin{tabular}{lrrcrrr}
+\toprule
+Model & Mean & SD & Range & Harrell's C & Paired & Folds won \\
+\midrule
+A. IPSS-R score           & 0.669 & 0.029 & 0.624--0.729 & 0.692 & --      & --    \\
+B. Benchmark-style Cox    & 0.688 & 0.029 & 0.657--0.756 & 0.703 & $+0.019$ & 13/15 \\
+C. IPSS-M-style Cox       & 0.716 & 0.023 & 0.686--0.765 & 0.736 & $+0.047$ & 15/15 \\
+D. Elastic-net Cox        & \textbf{0.722} & 0.021 & 0.696--0.769 & 0.740 & $+0.053$ & 15/15 \\
+E. Elastic-net Cox $+$    & 0.721 & 0.021 & 0.696--0.769 & 0.739 & $+0.053$ & 15/15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig14_cox_cv.png}
+\caption{Left: IPCW C-index of each model on each of the 15 validation folds. Right: the
+paired difference with the IPSS-R score on the same fold.}
+\label{fig:coxcv}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Further paired comparisons over the 15 folds.}
+\label{tab:pairwise}
+\begin{tabular}{llrrr}
+\toprule
+Comparison & Question & Mean diff. & SD & Folds won \\
+\midrule
+C $-$ B & clinical feature set vs benchmark      & $+0.028$  & 0.014 & 14/15 \\
+D $-$ C & 84 penalised features vs 24 chosen     & $+0.006$  & 0.009 & 10/15 \\
+E $-$ D & adding monocytes and missing flags     & $-0.0004$ & 0.001 & 4/15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Four conclusions follow from Tables~\ref{tab:coxcv} and~\ref{tab:pairwise} and
+Figure~\ref{fig:coxcv}:
+\begin{enumerate}
+  \item Every fitted Cox model beats the unfitted IPSS-R. The gains of C, D and E are
+        convincing: about $+0.05$, larger than the fold-to-fold spread, and won on all 15
+        folds.
+  \item The real step forward is the feature set. Moving from the four benchmark variables
+        to the 24 literature-chosen variables adds $+0.028$ and wins 14 of 15 folds.
+  \item Letting a penalised model use all 84 features adds only $+0.006$ beyond those 24
+        variables (10 of 15 folds), a small and uncertain gain.
+  \item Monocytes and the missing-value flags add nothing and lose 11 of 15 folds. This
+        settles the Stage~1 concern: the variable missing for 74\% of test patients is
+        safely dropped.
+\end{enumerate}
+On the training data itself, the IPSS-M-style model reaches a concordance of 0.743 against
+0.716 in cross-validation: the gap is the optimism of judging a model on the patients it
+was fitted to.
+
+\subsection{Hazard ratios}
+Figure~\ref{fig:hr} shows the hazard ratios of the IPSS-M-style model refitted on all
+3{,}173 patients (missing values filled with the median; blood values per standard
+deviation, the cytogenetic category and residual-gene count per step, and genes as
+mutated versus not).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig15_hazard_ratios.png}
+\caption{Hazard ratios with 95\% confidence intervals of the IPSS-M-style Cox model.
+Orange: significantly higher risk; blue: significantly lower risk; grey: interval
+includes 1.}
+\label{fig:hr}
+\end{figure}
+
+TP53 multi-hit is by far the strongest factor (HR 3.21, 95\% CI 2.59--3.98), followed by
+MLL partial tandem duplication (2.05) and FLT3 mutation (1.65). Each step up the IPSS-R
+cytogenetic scale multiplies the hazard by 1.34, and a missing karyotype by 1.45, perhaps
+because failed karyotypes are more common in sicker patients. Higher haemoglobin (HR 0.77
+per SD) and platelets (0.83 per SD) are protective. Two results differ from Stage~2.
+First, \textit{SF3B1} is no longer protective (HR 1.02, CI 0.88--1.18): its favourable
+Kaplan--Meier curve is explained by the other variables, since \textit{SF3B1}-mutated
+patients tend to have low blasts and a good karyotype. Second, white cells and
+neutrophils add nothing once the other variables are known.
+
+\subsection{Checking proportional hazards}
+If the proportional-hazards assumption holds, each coefficient $\beta_k$ is constant over
+time. Grambsch and Therneau~\cite{grambsch1994} showed that the scaled Schoenfeld residual
+of a death at time $t$, plus $\hat\beta_k$, estimates $\beta_k(t)$; a trend over time
+signals a violation. Table~\ref{tab:ph} gives the test for the largest statistics.
+
+\begin{table}[H]
+\centering
+\caption{Proportional-hazards test (rank-transformed time), largest statistics.}
+\label{tab:ph}
+\begin{tabular}{lrr}
+\toprule
+Variable & Test statistic & $p$ \\
+\midrule
+\textit{NPM1} mutated & 23.10 & $1.5\times10^{-6}$ \\
+Karyotype missing     & 17.07 & $3.6\times10^{-5}$ \\
+log platelets         & 16.04 & $6.2\times10^{-5}$ \\
+\textit{SF3B1} mutated & 5.12 & 0.024 \\
+\textit{U2AF1} mutated & 3.64 & 0.056 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Four of 24 variables have $p < 0.05$. With 1{,}600 deaths even small departures become
+significant, so Figure~\ref{fig:schoen} shows the size of the two clearest ones.
+\textit{NPM1} is harmful in the first months ($\beta(t) \approx +2$) and strongly protective
+afterwards ($\beta(t) \approx -2.5$ beyond four years): its single average coefficient of
+$-0.30$ hides two opposite effects. The protection of a high platelet count is
+concentrated in the first year and fades to almost nothing after three years. The other
+20 variables show no evidence of change. Because the metric only ranks patients, mild
+violations matter less than they would for predicting survival probabilities, but they
+motivate the tree-based models of Stage~5, which do not assume proportional hazards.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig16_schoenfeld.png}
+\caption{Estimated time-varying effect $\beta(t)$ (scaled Schoenfeld residual plus
+$\hat\beta$; black line: moving average of 150 deaths) against the constant effect
+assumed by the Cox model (dashed).}
+\label{fig:schoen}
+\end{figure}
+
+\subsection{The final elastic-net model}
+Refitted on all training patients with the same nested procedure (inner five-fold
+centre-grouped split), the elastic net chooses $\rho = 0.1$, close to ridge, and
+$\alpha = 0.190$, keeping 44 of 84 coefficients non-zero (Figure~\ref{fig:enet}). The
+largest effects are the IPSS-R score itself, the number of mutated genes, the TP53 and
+overall maximum VAF, and, on the protective side, haemoglobin and platelets.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig17_elasticnet_coefs.png}
+\caption{The 20 largest coefficients of the final elastic-net Cox model, per standard
+deviation of each feature.}
+\label{fig:enet}
+\end{figure}
+
+To see what a C-index of 0.72 means in practice, each training patient was given the
+risk score of the elastic-net model trained \emph{without their centre} (first
+repetition), and patients were split into quartiles within each fold.
+Figure~\ref{fig:oof} and Table~\ref{tab:oof} show the result.
+
+\begin{table}[H]
+\centering
+\caption{Survival by out-of-fold risk quartile (elastic-net Cox, unseen centres).}
+\label{tab:oof}
+\begin{tabular}{lrrrr}
+\toprule
+Quartile & $n$ & Median (y) & $\hat S(3)$ & $\hat S(7)$ \\
+\midrule
+Q1 (lowest risk)  & 795 & 8.28 & 0.834 & 0.564 \\
+Q2                & 793 & 4.40 & 0.643 & 0.326 \\
+Q3                & 791 & 2.42 & 0.431 & 0.157 \\
+Q4 (highest risk) & 794 & 1.07 & 0.130 & 0.057 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig18_km_oof_quartiles.png}
+\caption{Kaplan--Meier curves by out-of-fold risk quartile; log-rank $\chi^2 = 993.3$
+(3 df).}
+\label{fig:oof}
+\end{figure}
+
+The median survival falls from 8.3 years in the lowest-risk quarter to 1.1 years in the
+highest, and three-year survival from 83\% to 13\%. For comparison, the five IPSS-R
+groups gave $\chi^2 = 737.4$ with four degrees of freedom (Stage~3).
+
+\subsection{Submissions}
+Three submission files were produced from models fitted on all 3{,}173 training patients:
+the benchmark-style Cox, the IPSS-M-style Cox and the elastic-net Cox. Each contains the
+1{,}193 test IDs and a \texttt{risk\_score}. As a sanity check, the elastic-net mean risk
+score is $+0.43$ on the test centre against 0 on the training data, consistent with the
+sicker test population. The elastic-net model, best in cross-validation, was submitted
+first; its public score will be added here.
 
 % ==================================================================
-\begin{thebibliography}{9}
+\section{Next steps}
+% ==================================================================
+Stage 5 will fit machine-learning survival models, namely gradient-boosted survival and
+random survival forests, on the same features and the same 15 folds. Tree models do not
+assume proportional hazards and can capture effects such as those of \textit{NPM1} and
+platelets that change over time, as well as interactions between features. Their target
+is the elastic-net Cox model at $0.722 \pm 0.021$.
+
+% ==================================================================
+\begin{thebibliography}{99}
 
 \bibitem{noren2016}
 D.~P. Noren \textit{et al.},
@@ -926,6 +1202,31 @@ New comprehensive cytogenetic scoring system for primary myelodysplastic syndrom
 and oligoblastic acute myeloid leukemia after MDS derived from an international database
 merge,
 \textit{Journal of Clinical Oncology}, 30(8): 820--829, 2012.
+
+\bibitem{cox1972}
+D.~R. Cox,
+Regression models and life-tables,
+\textit{Journal of the Royal Statistical Society, Series B}, 34(2): 187--220, 1972.
+
+\bibitem{zou2005}
+H.~Zou and T.~Hastie,
+Regularization and variable selection via the elastic net,
+\textit{Journal of the Royal Statistical Society, Series B}, 67(2): 301--320, 2005.
+
+\bibitem{simon2011}
+N.~Simon, J.~Friedman, T.~Hastie and R.~Tibshirani,
+Regularization paths for Cox's proportional hazards model via coordinate descent,
+\textit{Journal of Statistical Software}, 39(5): 1--13, 2011.
+
+\bibitem{grambsch1994}
+P.~M. Grambsch and T.~M. Therneau,
+Proportional hazards tests and diagnostics based on weighted residuals,
+\textit{Biometrika}, 81(3): 515--526, 1994.
+
+\bibitem{bernard2022}
+E.~Bernard \textit{et al.},
+Molecular International Prognostic Scoring System for myelodysplastic syndromes,
+\textit{NEJM Evidence}, 1(7): EVIDoa2200008, 2022.
 
 \end{thebibliography}
 

@@ -238,15 +238,24 @@ PATHWAYS = {
 }
 TRUNCATING = {"frameshift_variant", "stop_gained", "splice_site_variant"}
 
+# Detection floor: the smallest VAF ever recorded in training is 0.02, so the
+# training centres did not report mutations below 2%. The test centre reports
+# a few fainter ones (9 mutations). We drop those so a "mutation" means the
+# same thing in both sets. (Added in Stage 4.)
+MIN_VAF = 0.02
+
 
 def harmonise_mutations(molecular):
     """
     Make the training and test mutation tables use the same labels.
-    In the test file, splice-site mutations have an empty EFFECT (written as
-    c.307+1G>A etc.), while training labels them "splice_site_variant".
+    1. In the test file, splice-site mutations have an empty EFFECT (written as
+       c.307+1G>A etc.), while training labels them "splice_site_variant".
+    2. Mutations below the training detection floor (VAF < 0.02) are removed.
+       Rows with no VAF (e.g. MLL partial tandem duplications) are kept.
     """
     m = molecular.copy()
     m["EFFECT"] = m["EFFECT"].fillna("splice_site_variant")
+    m = m[~(m["VAF"] < MIN_VAF)]          # "~" means NOT; NaN < 0.02 is False, so NaN rows stay
     return m
 
 
