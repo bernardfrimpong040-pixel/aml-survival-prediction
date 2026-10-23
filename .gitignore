@@ -1,0 +1,28 @@
+# Python virtual environment and caches
+.venv/
+__pycache__/
+*.pyc
+
+# Challenge data: do NOT publish it (Challenge Data terms of use)
+data/raw/*
+!data/raw/README.md
+data/processed/*
+!data/processed/.gitkeep
+
+# Prediction files on the challenge test patients stay local
+submissions/*
+!submissions/.gitkeep
+
+# LaTeX build files (the PDF itself is kept)
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.synctex.gz
+paper/*.fls
+paper/*.fdb_latexmk
+
+# Editor / OS files
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,19 @@
+# Packages for the AML survival project.
+#
+# Install in TWO steps (Windows, Python 3.13):
+#   pip install -r requirements.txt
+#   pip install --no-deps scikit-survival
+#
+# Why two steps? scikit-survival lists "ecos" as a dependency, but ecos has no
+# ready-made Windows package for Python 3.13 and needs a C++ compiler to build.
+# ecos is only used by one survival-SVM function this project never uses, so we
+# install scikit-survival without it. "pip check" will mention ecos - that is expected.
+numpy>=2.0
+pandas>=2.2,<3
+matplotlib>=3.9
+scikit-learn>=1.5
+scipy
+joblib
+numexpr
+osqp>=1.0.2
+lifelines>=0.30

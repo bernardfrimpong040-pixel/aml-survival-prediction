@@ -1,0 +1,345 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{float}          % lets us use [H] to keep figures/tables in place
+\usepackage{booktabs}       % nicer table lines
+\usepackage{caption}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+% Figures are in ../figures/ when compiling inside paper/,
+% or in figures/ when the folder is uploaded next to main.tex (e.g. Overleaf).
+\graphicspath{{../figures/}{figures/}}
+
+\title{Overall Survival Prediction in Adult Myeloid Leukemia:\\
+Kaplan--Meier, Cox Regression and Machine-Learning Survival Models}
+\author{Bernard Frimpong\\
+\small M.S. Applied Mathematics, University of Akron}
+\date{Working draft --- Stage 1 (data audit), October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report documents my work on the QRT $\times$ Institut Gustave Roussy data
+challenge on Challenge Data (ENS Paris), whose goal is to rank adult patients with
+myeloid leukemia by their risk of death, using clinical measurements, cytogenetic
+reports and somatic gene mutations. Models are scored with the inverse probability
+of censoring weighted (IPCW) concordance index truncated at seven years. This draft
+covers the data audit. Its main finding is that the 1{,}193 test patients all come
+from a single clinical centre that is absent from the 23 training centres, and that
+this centre's patients are clinically sicker, with more than twice the training rate
+of \textit{TP53} mutations. Model validation will therefore hold out whole centres.
+\end{abstract}
+
+% ==================================================================
+\section{Introduction}
+% ==================================================================
+Myeloid leukemias are blood cancers in which abnormal immature cells (blasts)
+accumulate in the bone marrow. Estimating a patient's prognosis guides treatment:
+low-risk patients may receive supportive care, while high-risk patients may be
+prioritised for intensive treatment such as stem cell transplantation.
+
+The outcome is \emph{overall survival} (OS): the time from diagnosis to death or to the
+last follow-up. When a patient is still alive at the last follow-up, the true survival
+time is unknown; we only know it is longer than the observed time. Such observations
+are called \emph{right-censored}, and handling them correctly is the purpose of
+survival analysis.
+
+The project follows a staged plan:
+Kaplan--Meier estimation and log-rank tests,
+Cox proportional hazards regression,
+and machine-learning survival models (gradient-boosted survival and random survival
+forests), all compared under the challenge metric with honest cross-validation.
+A similar crowdsourced effort, the DREAM 9 AML Outcome Prediction Challenge, also
+scored survival models with a concordance index~\cite{noren2016}.
+
+% ==================================================================
+\section{Data}
+% ==================================================================
+The data come from 24 clinical centres and are split into the five files described in
+Table~\ref{tab:files}. The \texttt{ID} column links the files.
+
+\begin{table}[H]
+\centering
+\caption{The five challenge files.}
+\label{tab:files}
+\begin{tabular}{lrl}
+\toprule
+File & Rows & Content \\
+\midrule
+\texttt{clinical\_train.csv}  & 3{,}323  & one row per patient: centre, blood counts, karyotype \\
+\texttt{clinical\_test.csv}   & 1{,}193  & same, for test patients \\
+\texttt{molecular\_train.csv} & 10{,}935 & one row per somatic mutation \\
+\texttt{molecular\_test.csv}  & 3{,}089  & same, for test patients \\
+\texttt{target\_train.csv}    & 3{,}323  & \texttt{OS\_YEARS}, \texttt{OS\_STATUS} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Clinical variables.}
+\texttt{BM\_BLAST} (bone-marrow blasts, \%), \texttt{WBC} (white blood cells, G/L),
+\texttt{ANC} (absolute neutrophil count, G/L), \texttt{MONOCYTES} (G/L),
+\texttt{HB} (haemoglobin, g/dL), \texttt{PLT} (platelets, G/L) and
+\texttt{CYTOGENETICS}, a free-text karyotype written in ISCN notation
+(for example \texttt{46,xy} for a normal male karyotype).
+
+\paragraph{Molecular variables.}
+Each row is one somatic mutation, with its chromosomal position, reference and
+alternate bases, the gene, the protein change, the broad effect, the variant allele
+fraction (\texttt{VAF}, the share of sequencing reads carrying the mutation) and, not
+mentioned in the challenge description, the sequencing read depth (\texttt{DEPTH}).
+
+% ==================================================================
+\section{The evaluation metric}
+% ==================================================================
+For each patient $i$ we observe a time $T_i$ (\texttt{OS\_YEARS}), an event indicator
+$\Delta_i$ (1 = death, 0 = censored), and the model gives a risk score $\eta_i$.
+
+\paragraph{Harrell's C-index.}
+A pair of patients $(i,j)$ is \emph{comparable} when we know who died first, that is,
+when $T_i < T_j$ and patient $i$ died ($\Delta_i = 1$). The pair is \emph{concordant}
+when the model agrees, $\eta_i > \eta_j$. Harrell's C-index~\cite{harrell1982} is
+\begin{equation}
+C = \frac{\text{number of concordant comparable pairs}}{\text{number of comparable pairs}}.
+\end{equation}
+A value of $0.5$ corresponds to random guessing and $1$ to a perfect ranking.
+
+\paragraph{IPCW C-index (Uno's C).}
+Patients who die late are less likely to be observed dying, because many patients are
+censored before then. Harrell's C therefore over-represents early deaths. Uno
+\textit{et al.}~\cite{uno2011} correct this by weighting each comparable pair by
+$1/\hat G(T_i)^2$, where $\hat G(t)$ is the Kaplan--Meier estimate of the probability
+of \emph{not yet being censored} at time $t$. With the truncation horizon $\tau = 7$
+years used by the challenge,
+\begin{equation}
+C_\tau = \frac{\displaystyle\sum_{i}\sum_{j} \Delta_i\,\hat G(T_i)^{-2}\,
+\mathbf{1}(T_i < T_j,\ T_i < \tau)\,\mathbf{1}(\eta_i > \eta_j)}
+{\displaystyle\sum_{i}\sum_{j} \Delta_i\,\hat G(T_i)^{-2}\,
+\mathbf{1}(T_i < T_j,\ T_i < \tau)}.
+\end{equation}
+In plain language: a death at a time when few patients remain uncensored is rare to
+observe, so it counts more. Only the ordering of the scores $\eta_i$ matters. The
+challenge computes $C_\tau$ with \texttt{scikit-survival}~\cite{polsterl2020}.
+
+% ==================================================================
+\section{Data audit (Stage 1)}
+% ==================================================================
+
+\subsection{Linking and outcome}
+All IDs are unique, every mutation row belongs to a known patient, and no patient
+appears in both training and test sets. However, 150 training patients have no
+recorded outcome and are excluded from modelling. Table~\ref{tab:outcome} summarises
+the remaining outcomes and Figure~\ref{fig:followup} shows the observed times.
+
+\begin{table}[H]
+\centering
+\caption{Outcome of the training patients.}
+\label{tab:outcome}
+\begin{tabular}{lr}
+\toprule
+Quantity & Value \\
+\midrule
+Training patients                           & 3{,}323 \\
+Without outcome (excluded)                  & 150 \\
+With outcome                                & 3{,}173 \\
+Deaths ($\Delta = 1$)                       & 1{,}600 (50.4\%) \\
+Censored ($\Delta = 0$)                     & 1{,}573 (49.6\%) \\
+Median observed time (years)                & 1.65 \\
+Maximum observed time (years)               & 22.04 \\
+Observed time exactly 0                     & 53 \\
+Observed beyond the 7-year horizon          & 172 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig04_followup.png}
+\caption{Observed time of the 3{,}173 training patients with an outcome, split into
+deaths and censored patients. The dashed line marks the 7-year horizon of the metric.}
+\label{fig:followup}
+\end{figure}
+
+About half the patients are censored, so simply discarding them or treating their
+observed time as a death time would badly bias any model. Most deaths occur within
+the first two years, and only 172 patients are followed beyond seven years, which
+justifies the truncation of the metric.
+
+\subsection{Clinical centres: the test set is a new hospital}
+The 3{,}323 training patients come from 23 centres, while all 1{,}193 test patients
+come from one centre, \texttt{KYW}, that does not appear in training
+(Figure~\ref{fig:centers}). Death rates also vary widely between training centres,
+from 11\% (\texttt{ROM}) to 92\% (\texttt{MUV}), reflecting different patient
+populations and follow-up lengths.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{fig03_centers.png}
+\caption{Number of patients per clinical centre. The test centre \texttt{KYW} (orange)
+contributes no training patients.}
+\label{fig:centers}
+\end{figure}
+
+This has a direct consequence for validation. A random $K$-fold split mixes patients
+from the same centre into training and validation folds, so the model is always
+validated on centres it has already seen. The real task is to predict for an
+\emph{unseen} centre. Cross-validation will therefore be grouped by centre, and the
+\texttt{CENTER} variable cannot be used as a predictor.
+
+\subsection{Clinical variables: training versus test}
+Table~\ref{tab:clinical} and Figures~\ref{fig:missing} and~\ref{fig:dist} compare the
+clinical variables in the two sets.
+
+\begin{table}[H]
+\centering
+\caption{Missing values and medians of the clinical variables.}
+\label{tab:clinical}
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{Missing (\%)} & \multicolumn{2}{c}{Median} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Variable & Train & Test & Train & Test \\
+\midrule
+\texttt{BM\_BLAST} (\%)     & 3.3  & 9.6  & 3.00   & 6.00 \\
+\texttt{WBC} (G/L)          & 8.2  & 9.4  & 4.10   & 2.90 \\
+\texttt{ANC} (G/L)          & 5.8  & 11.8 & 2.00   & 1.30 \\
+\texttt{MONOCYTES} (G/L)    & 18.1 & 74.0 & 0.37   & 0.20 \\
+\texttt{HB} (g/dL)          & 3.3  & 9.3  & 9.70   & 8.40 \\
+\texttt{PLT} (G/L)          & 3.7  & 9.6  & 123.00 & 74.00 \\
+\texttt{CYTOGENETICS}       & 11.6 & 9.7  & --     & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig01_missing_values.png}
+\caption{Percentage of missing values in each clinical variable.}
+\label{fig:missing}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig02_clinical_distributions.png}
+\caption{Distributions of the clinical variables in training (blue) and test (orange).
+Each histogram is scaled to area one so that sets of different sizes can be compared.
+Skewed blood counts are shown on a $\log_{10}$ scale; the spike at $-2$ for monocytes
+corresponds to recorded values of zero.}
+\label{fig:dist}
+\end{figure}
+
+The test patients are clinically sicker: lower haemoglobin and platelets, lower
+neutrophils, and a much larger share with bone-marrow blasts above 20\%
+(17.6\% versus 4.2\%). Monocytes are missing for 74\% of test patients, so a model
+that leans on that variable would be fragile on the test set.
+
+\subsection{Gene mutations}
+Training patients carry on average 3.29 recorded mutations and test patients 2.59;
+297 training and 139 test patients have none, which is genuine information rather than
+missing data. Training data contain 124 distinct genes and test data 83, of which 19
+never appear in training. Of the training rows, 114 lack a chromosomal position: they
+are partial tandem duplications of \textit{MLL} (89) and internal tandem duplications
+of \textit{FLT3} (25), which are structural events rather than single-base changes.
+In 1{,}274 cases the same gene is mutated more than once in one patient.
+
+\begin{table}[H]
+\centering
+\caption{Ten most frequently mutated genes in training: percentage of patients with at
+least one mutation.}
+\label{tab:genes}
+\begin{tabular}{lrr}
+\toprule
+Gene & Train (\%) & Test (\%) \\
+\midrule
+\textit{TET2}   & 31.1 & 17.5 \\
+\textit{ASXL1}  & 26.9 & 12.7 \\
+\textit{SF3B1}  & 22.2 & 7.7 \\
+\textit{SRSF2}  & 17.2 & 9.1 \\
+\textit{DNMT3A} & 16.1 & 11.1 \\
+\textit{RUNX1}  & 13.9 & 13.7 \\
+\textit{TP53}   & 11.4 & 25.7 \\
+\textit{STAG2}  & 9.1  & 6.7 \\
+\textit{U2AF1}  & 8.6  & 8.4 \\
+\textit{EZH2}   & 6.5  & 6.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{fig05_gene_frequencies.png}
+\caption{The twenty most frequently mutated genes in training, with their frequency in
+the test centre.}
+\label{fig:genes}
+\end{figure}
+
+The most striking difference is \textit{TP53}, mutated in 25.7\% of test patients
+against 11.4\% in training (Table~\ref{tab:genes}, Figure~\ref{fig:genes}).
+\textit{TP53} mutations are associated with poor prognosis in myeloid neoplasms, which
+is consistent with the sicker clinical profile of the test centre. By contrast,
+\textit{SF3B1} mutations, typically associated with lower-risk disease, are almost three
+times rarer in the test set.
+
+\subsection{Cytogenetics text}
+In training, karyotypes are written in lower case (\texttt{46,xy}); in the test set
+they are written in upper case (\texttt{46,XY}), and 241 test patients have the single
+word \texttt{Normal}. Any parsing must first convert text to lower case and map
+\texttt{Normal} to a normal karyotype; otherwise every test karyotype would look
+unfamiliar to the model.
+
+\subsection{Consequences for modelling}
+\begin{enumerate}
+  \item Exclude the 150 training patients without outcome.
+  \item Validate with cross-validation grouped by centre, and do not use
+        \texttt{CENTER} as a predictor.
+  \item Prefer features that are measured consistently in both sets; treat
+        \texttt{MONOCYTES} with caution.
+  \item Normalise the cytogenetics text before extracting features.
+  \item Encode ``no mutation found'' as zero, not as missing.
+\end{enumerate}
+
+% ==================================================================
+\section{Next steps}
+% ==================================================================
+Stage 2 will estimate Kaplan--Meier survival curves overall and by clinical and
+genetic groups, compare groups with log-rank tests, and compute the C-index and the
+IPCW C-index by hand on a small example before checking them against
+\texttt{scikit-survival}.
+
+% ==================================================================
+\begin{thebibliography}{9}
+
+\bibitem{noren2016}
+D.~P. Noren \textit{et al.},
+A crowdsourcing approach to developing and assessing prediction algorithms for AML
+prognosis,
+\textit{PLOS Computational Biology}, 12(6): e1004890, 2016.
+
+\bibitem{harrell1982}
+F.~E. Harrell, R.~M. Califf, D.~B. Pryor, K.~L. Lee and R.~A. Rosati,
+Evaluating the yield of medical tests,
+\textit{JAMA}, 247(18): 2543--2546, 1982.
+
+\bibitem{uno2011}
+H.~Uno, T.~Cai, M.~J. Pencina, R.~B. D'Agostino and L.~J. Wei,
+On the C-statistics for evaluating overall adequacy of risk prediction procedures
+with censored survival data,
+\textit{Statistics in Medicine}, 30(10): 1105--1117, 2011.
+
+\bibitem{polsterl2020}
+S.~P\"olsterl,
+scikit-survival: a library for time-to-event analysis built on top of scikit-learn,
+\textit{Journal of Machine Learning Research}, 21(212): 1--6, 2020.
+
+\end{thebibliography}
+
+\end{document}

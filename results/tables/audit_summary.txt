@@ -1,0 +1,91 @@
+================================================================
+STAGE 1 - DATA AUDIT
+================================================================
+
+A. LINKING THE FILES
+  Training patients (clinical): 3323
+  Test patients (clinical):     1193
+  Repeated IDs in clinical_train: 0
+  Same IDs in clinical_train and target_train? True
+  IDs shared by train and test (should be 0): 0
+  Mutation rows with an unknown training ID: 0
+  Mutation rows with an unknown test ID:     0
+
+B. THE OUTCOME (target_train.csv)
+  Patients with NO outcome recorded: 150  -> removed from modelling
+  Patients with an outcome: 3173
+  Deaths (OS_STATUS = 1):    1600  (50.4%)
+  Censored (OS_STATUS = 0):  1573  (49.6%)
+  OS_YEARS: min 0.00, median 1.65, max 22.04 years
+  Patients with OS_YEARS exactly 0: 53
+  Patients followed beyond the 7-year horizon: 172
+  Patients without outcome, by centre: KI=80, HMS=32, CCH=19, DUS=10, VU=4, UOXF=2, GESMD=1, UOB=1, ROM=1
+
+C. CLINICAL VARIABLES (training vs test)
+    variable  missing_train_pct  missing_test_pct  median_train  median_test
+    BM_BLAST                3.3               9.6          3.00          6.0
+         WBC                8.2               9.4          4.10          2.9
+         ANC                5.8              11.8          2.00          1.3
+   MONOCYTES               18.1              74.0          0.37          0.2
+          HB                3.3               9.3          9.70          8.4
+         PLT                3.7               9.6        123.00         74.0
+CYTOGENETICS               11.6               9.7           NaN          NaN
+  Patients with bone-marrow blasts > 20%: train 4.2%, test 17.6%
+
+D. CLINICAL CENTRES
+  Number of training centres: 23
+  Test centres: ['KYW']
+  Test centres also seen in training: []
+        patients_total  patients_with_outcome  death_rate  median_years
+CENTER                                                                 
+KI                 900                    820        0.61          2.43
+DUS                455                    445        0.65          1.63
+PV                 316                    316        0.26          1.05
+GESMD              246                    245        0.46          1.48
+RMCN               199                    199        0.58          1.95
+CCH                159                    140        0.24          1.79
+CGM                107                    107        0.35          0.96
+ROM                104                    103        0.11          1.15
+UOB                 88                     87        0.80          2.30
+MUV                 83                     83        0.92          1.61
+HMS                 83                     51        0.61          1.89
+FUCE                73                     73        0.53          1.77
+TUD                 73                     73        0.34          2.06
+ICO                 71                     71        0.39          1.89
+FLO                 68                     68        0.15          0.73
+DUTH                66                     66        0.59          1.50
+UOXF                50                     48        0.40          0.86
+HIAE                47                     47        0.57          1.43
+MSK                 37                     37        0.51          1.85
+IHBT                33                     33        0.64          2.28
+VU                  33                     29        0.17          0.77
+UMG                 26                     26        0.38          1.78
+REL                  6                      6        0.33          1.00
+
+E. MOLECULAR DATA (one row = one mutation)
+  Mutation rows: train 10935, test 3089
+  Extra column not in the challenge description: DEPTH (sequencing read depth)
+  Mean mutations per patient: train 3.29, test 2.59
+  Patients with no mutation: train 297, test 139
+  Training rows without CHR/START/END: 114 (types: {'PTD': 89, 'ITD': 25}, genes: {'MLL': 89, 'FLT3': 25})
+  (patient, gene) pairs with 2+ mutations in training: 1274
+  Distinct genes: train 124, test 83
+  Genes found ONLY in test (19): ATM, BCL2, BLM, BRCA2, CCND3, EPOR, FANCG, HAX1, IKZF1, MED12, MYD88, NSD1, PDS5B, PIGA, RIT1, SBDS, STAT5B, USP9X, VEGFA
+  Top 10 genes (% of patients mutated):
+        pct_train  pct_test
+GENE                       
+TET2         31.1      17.5
+ASXL1        26.9      12.7
+SF3B1        22.2       7.7
+SRSF2        17.2       9.1
+DNMT3A       16.1      11.1
+RUNX1        13.9      13.7
+TP53         11.4      25.7
+STAG2         9.1       6.7
+U2AF1         8.6       8.4
+EZH2          6.5       6.7
+
+F. CYTOGENETICS TEXT FORMAT
+  Training: missing 387, the word 'Normal' 0, upper-case XX/XY 0, lower-case xx/xy 2838
+  Test    : missing 116, the word 'Normal' 241, upper-case XX/XY 776, lower-case xx/xy 1
+  -> In Stage 3 we must convert text to lower case and treat 'Normal' as a normal karyotype.
