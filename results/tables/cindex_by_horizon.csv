@@ -1,0 +1,21 @@
+model,tau_years,mean_ipcw_C
+A. IPSS-R score (no fitting),1,0.7148
+A. IPSS-R score (no fitting),2,0.7069
+A. IPSS-R score (no fitting),3,0.6981
+A. IPSS-R score (no fitting),5,0.6843
+A. IPSS-R score (no fitting),7,0.6738
+D. Elastic-net Cox (84),1,0.7562
+D. Elastic-net Cox (84),2,0.7522
+D. Elastic-net Cox (84),3,0.7435
+D. Elastic-net Cox (84),5,0.7333
+D. Elastic-net Cox (84),7,0.7249
+F. Random survival forest,1,0.753
+F. Random survival forest,2,0.7512
+F. Random survival forest,3,0.7422
+F. Random survival forest,5,0.7317
+F. Random survival forest,7,0.7223
+G. XGBoost Cox (nested),1,0.7635
+G. XGBoost Cox (nested),2,0.7567
+G. XGBoost Cox (nested),3,0.7468
+G. XGBoost Cox (nested),5,0.736
+G. XGBoost Cox (nested),7,0.7281

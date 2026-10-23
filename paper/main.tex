@@ -24,7 +24,7 @@
 Kaplan--Meier, Cox Regression and Machine-Learning Survival Models}
 \author{Bernard Frimpong\\
 \small M.S. Applied Mathematics, University of Akron}
-\date{Working draft --- Stage 4 (Cox regression), October 2026}
+\date{Working draft --- Stage 5 (machine-learning survival models), October 2026}
 
 \begin{document}
 \maketitle
@@ -51,7 +51,11 @@ gene list reaches 0.716 and an elastic-net Cox model on 84 features 0.722, each 
 the IPSS-R on all 15 folds. Monocyte counts, missing in 74\% of test patients, add
 nothing. Hazard ratios agree with clinical knowledge (TP53 multi-hit HR 3.2), and the
 proportional-hazards assumption is violated mainly by \textit{NPM1} and platelets, whose
-effects change over time.
+effects change over time. On the public leaderboard the elastic-net scores 0.7543. Tree
+models (a random survival forest and XGBoost with a Cox loss, tuned by nested
+cross-validation) do not improve on it: XGBoost ties the elastic-net at 0.723 and the
+forest reaches 0.719, suggesting the engineered features already capture most of the
+structure the trees could find.
 \end{abstract}
 
 % ==================================================================
@@ -1138,17 +1142,163 @@ Three submission files were produced from models fitted on all 3{,}173 training 
 the benchmark-style Cox, the IPSS-M-style Cox and the elastic-net Cox. Each contains the
 1{,}193 test IDs and a \texttt{risk\_score}. As a sanity check, the elastic-net mean risk
 score is $+0.43$ on the test centre against 0 on the training data, consistent with the
-sicker test population. The elastic-net model, best in cross-validation, was submitted
-first; its public score will be added here.
+sicker test population. Two files were submitted (Table~\ref{tab:lb4}).
+
+\begin{table}[H]
+\centering
+\caption{Public leaderboard scores of the Stage~4 submissions (IPCW C-index on the public
+part of the test centre).}
+\label{tab:lb4}
+\begin{tabular}{lrr}
+\toprule
+Model & Cross-validation & Public score \\
+\midrule
+D. Elastic-net Cox (84 features)   & 0.722 & \textbf{0.7543} \\
+C. IPSS-M-style Cox (24 variables) & 0.716 & 0.7374 \\
+\midrule
+Difference D $-$ C                 & $+0.006$ & $+0.017$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two observations. First, both public scores are \emph{higher} than cross-validation, the
+reverse of the usual drop on a new centre. A plausible reason is the case mix found in
+Stage~3: the test centre spreads its patients over a wider range of risk (a third are
+IPSS-R very high, yet low-risk patients remain), and a population with a wider range of
+risk is easier to rank, so the C-index rises. The leaderboard score therefore reflects the
+centre as much as the model, and models will continue to be chosen by paired
+cross-validation rather than by public score.
+
+Second, the gap between the two models almost triples at the test centre, from $+0.006$ in
+cross-validation to $+0.017$. Both scores are measured on the same public patients, so the
+comparison is paired. A likely explanation is that the elastic-net's extra features
+describe the high-risk end in detail (number of abnormalities, monosomal karyotype, TP53
+VAF, number of mutated genes), whereas model C summarises it coarsely (the IPSS-R
+cytogenetic category stops at ``more than three abnormalities''). The test centre has
+many more such patients than the training centres. A lesson for the write-up:
+cross-validation on centres unlike the target can understate the value of features that
+matter most for the target.
+
+% ==================================================================
+\section{Machine-learning survival models (Stage 5)}
+\label{sec:trees}
+% ==================================================================
+Cox models assume that each feature acts the same way at all times (proportional hazards)
+and adds to the log hazard without interacting with the others. Tree-based models drop
+both assumptions. Two were fitted on the same 84 features as the elastic-net and
+evaluated on the same 15 centre-grouped folds.
+
+\subsection{Random survival forest}
+A random survival forest~\cite{ishwaran2008} grows many survival trees. Each tree is grown
+on a bootstrap sample of patients (drawn with replacement) and, at every split, considers
+only a random subset of the features. A split is chosen to separate the survival curves
+of the two child nodes as much as possible (by the log-rank statistic of Stage~2). Each
+leaf stores the Nelson--Aalen estimate of the cumulative hazard of its patients, and the
+forest averages these over trees. The risk score is the predicted cumulative hazard summed
+over the observed event times: more expected deaths means higher risk. Settings: 300
+trees, at least 15 patients per leaf, and $\sqrt{84} \approx 9$ features tried per split.
+These were fixed rather than tuned, because forests are not very sensitive to them and one
+fit takes about six seconds.
+
+\subsection{Gradient boosting with a Cox loss}
+Gradient boosting~\cite{friedman2001} builds the risk score as a sum of small trees,
+\[
+\eta(x) = \nu \sum_{m=1}^{M} f_m(x),
+\]
+added one at a time. Each new tree $f_m$ is fitted to the gradient of the negative Cox
+log partial likelihood (Equation~\eqref{eq:partial}) at the current scores. In plain
+language, each tree pushes the scores in the direction that most improves the Cox fit,
+and the learning rate $\nu = 0.03$ keeps every step small. The XGBoost
+implementation~\cite{chen2016} was used, with 80\% of patients and half the features
+sampled for each tree and a minimum leaf weight of 10. It handles missing values itself
+by learning which branch they should follow. The tree depth (2, 3 or 4) and the number of
+trees (50 to 600) were chosen by the same nested, centre-grouped inner cross-validation
+as the elastic-net. In the first run, the smallest number of trees offered (100) was chosen
+in 7 of 15 folds. A choice at the edge of the grid means the best value might lie beyond
+it, so 50 and 150 were added. After that, 50 was never chosen, the choices spread between
+100 and 300 trees, and the results did not change.
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{IPCW C-index over the same 15 centre-grouped folds; paired differences are with
+the elastic-net Cox (D).}
+\label{tab:treecv}
+\begin{tabular}{lrrcrr}
+\toprule
+Model & Mean & SD & Range & Paired vs D & Folds won vs D \\
+\midrule
+A. IPSS-R score            & 0.669 & 0.029 & 0.624--0.729 & $-0.053$ & --    \\
+D. Elastic-net Cox         & 0.722 & 0.021 & 0.696--0.769 & --       & --    \\
+F. Random survival forest  & 0.719 & 0.021 & 0.694--0.774 & $-0.003$ & 4/15  \\
+G. XGBoost Cox             & \textbf{0.723} & 0.021 & 0.698--0.767 & $+0.001$ & 10/15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig19_tree_cv.png}
+\caption{Left: IPCW C-index on each validation fold. Right: paired difference with the
+elastic-net Cox on the same fold.}
+\label{fig:treecv}
+\end{figure}
+
+The tree models do \emph{not} beat the elastic-net (Table~\ref{tab:treecv},
+Figure~\ref{fig:treecv}). XGBoost ties it ($+0.001$, 10 of 15 folds, a paired SD of 0.003),
+and the forest is slightly worse ($-0.003$, 4 of 15). This is a genuine result, not a
+failure of tuning: the inner cross-validation consistently preferred small models (100 to
+300 shallow trees at a low learning rate), which signals that there is little structure
+left for trees to find beyond what the features already encode. Two reasons are likely.
+The engineered features already contain the main non-linearities and interactions, since
+the IPSS-R score, the cytogenetic categories and TP53 multi-hit status are themselves
+expert-designed combinations. And with about 1{,}600 deaths, the data are too small to
+estimate reliably the subtle time-varying effects found in Stage~4.
+
+\paragraph{Accuracy by horizon.} Figure~\ref{fig:horizon} recomputes the out-of-fold
+IPCW C-index with horizons $\tau$ from one to seven years. All models rank early deaths
+better than late ones, falling from about 0.76 at one year to 0.72 at seven. The only
+visible advantage of XGBoost is at one year (0.760 against 0.756 for the elastic-net),
+consistent with trees capturing some short-term effects such as the early harm of
+\textit{NPM1} mutation. The fitted models gain most over the IPSS-R at long horizons
+(0.051 at seven years against 0.041 at one), because the IPSS-R was designed for
+myelodysplastic syndromes rather than for this mixed cohort.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig20_horizon.png}
+\caption{Out-of-fold IPCW C-index (repetition 0, mean of five folds) for horizons $\tau$ of
+one to seven years.}
+\label{fig:horizon}
+\end{figure}
+
+\paragraph{What the boosted trees use.} Figure~\ref{fig:xgbimp} shows each feature's share
+of the total improvement in the Cox loss (``gain'') in the final XGBoost model. The IPSS-R
+score (20\%) and the number of mutated genes (12\%) dominate, followed by haemoglobin,
+TP53 VAF and platelets: the same picture as the elastic-net coefficients
+(Figure~\ref{fig:enet}). Gain measures how much a model \emph{uses} a feature, not its causal
+effect, and correlated features share the credit.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig21_xgb_importance.png}
+\caption{XGBoost Cox: the 20 features with the largest share of total gain.}
+\label{fig:xgbimp}
+\end{figure}
+
+\paragraph{How similar are the models?} On the test centre, the Spearman rank correlation
+between the risk scores of the elastic-net and XGBoost is 0.960, between the elastic-net
+and the forest 0.967, and between XGBoost and the forest 0.969. The three models largely
+agree on who is at high risk, which limits how much averaging them can help.
 
 % ==================================================================
 \section{Next steps}
 % ==================================================================
-Stage 5 will fit machine-learning survival models, namely gradient-boosted survival and
-random survival forests, on the same features and the same 15 folds. Tree models do not
-assume proportional hazards and can capture effects such as those of \textit{NPM1} and
-platelets that change over time, as well as interactions between features. Their target
-is the elastic-net Cox model at $0.722 \pm 0.021$.
+Stage 6 will combine the models in a rank-averaged ensemble, evaluated on the same folds,
+and examine permutation importance on held-out folds, then choose the final submission by
+paired cross-validation. Given the high correlation between the models, a modest gain is
+expected.
 
 % ==================================================================
 \begin{thebibliography}{99}
@@ -1222,6 +1372,22 @@ Regularization paths for Cox's proportional hazards model via coordinate descent
 P.~M. Grambsch and T.~M. Therneau,
 Proportional hazards tests and diagnostics based on weighted residuals,
 \textit{Biometrika}, 81(3): 515--526, 1994.
+
+\bibitem{ishwaran2008}
+H.~Ishwaran, U.~B. Kogalur, E.~H. Blackstone and M.~S. Lauer,
+Random survival forests,
+\textit{The Annals of Applied Statistics}, 2(3): 841--860, 2008.
+
+\bibitem{friedman2001}
+J.~H. Friedman,
+Greedy function approximation: a gradient boosting machine,
+\textit{The Annals of Statistics}, 29(5): 1189--1232, 2001.
+
+\bibitem{chen2016}
+T.~Chen and C.~Guestrin,
+XGBoost: a scalable tree boosting system,
+\textit{Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery
+and Data Mining}, 785--794, 2016.
 
 \bibitem{bernard2022}
 E.~Bernard \textit{et al.},

@@ -63,9 +63,10 @@ def add_ipssm_residual(table):
 # ---------------------------------------------------------------------------
 # The metric
 # ---------------------------------------------------------------------------
-def ipcw_c(y_train, y_valid, risk):
-    """Challenge metric. G(t) is estimated from y_train, as in the benchmark."""
-    return concordance_index_ipcw(y_train, y_valid, np.asarray(risk, dtype=float), tau=config.TAU)[0]
+def ipcw_c(y_train, y_valid, risk, tau=config.TAU):
+    """Challenge metric. G(t) is estimated from y_train, as in the benchmark.
+    tau = horizon in years (the challenge uses 7; Stage 5 also looks at 1-5)."""
+    return concordance_index_ipcw(y_train, y_valid, np.asarray(risk, dtype=float), tau=tau)[0]
 
 
 def harrell_c(y_valid, risk):
@@ -124,6 +125,92 @@ def fit_coxnet_nested(X, y, centres, l1_ratios=(0.1, 0.5, 1.0), n_inner=4):
     inner_score, l1, grid, alpha = best
     model = _coxnet(l1, alphas=grid).fit(X, y)
     return model, alpha, l1, inner_score
+
+
+# ---------------------------------------------------------------------------
+# Tree models (added in Stage 5)
+# ---------------------------------------------------------------------------
+def make_rsf(seed=config.SEED):
+    """
+    Random survival forest: 300 survival trees, each grown on a bootstrap
+    sample of patients, trying a random subset of features (sqrt of the number
+    of features) at every split. A leaf must hold at least 15 patients.
+    The forest's risk score is the predicted cumulative hazard summed over
+    time: a bigger value means more expected deaths, i.e. higher risk.
+    Trees do not need scaling, but this implementation needs no missing
+    values, so the median imputer (learned inside the fold) stays.
+    """
+    from sksurv.ensemble import RandomSurvivalForest
+    return make_pipeline(SimpleImputer(strategy="median"),
+                         RandomSurvivalForest(n_estimators=300, min_samples_leaf=15,
+                                              max_features="sqrt", n_jobs=-1, random_state=seed))
+
+
+def xgb_label(table):
+    """
+    XGBoost's Cox loss reads the outcome from ONE number per patient:
+      +time if the patient died, -time if censored.
+    A censored time of exactly 0 would read as +0, so it becomes -0.000001.
+    """
+    t = table["OS_YEARS"].to_numpy(dtype=float)
+    lab = np.where(table["OS_STATUS"].to_numpy() == 1, t, -t)
+    lab[(table["OS_STATUS"].to_numpy() == 0) & (t == 0)] = -1e-6
+    return lab
+
+
+XGB_DEPTHS = (2, 3, 4)                 # how many splits deep each tree may go
+XGB_TREES = (50, 100, 150, 200, 300, 450, 600)  # numbers of trees tried
+# (50 and 150 were added after the first run: 100, then the smallest value,
+#  was chosen in 7 of 15 folds. A choice at the edge of the grid means the
+#  best value might lie beyond it, so the grid was widened.)
+
+
+def _xgb(depth, n_trees, seed=config.SEED):
+    """
+    Gradient boosting with the Cox partial likelihood as loss: trees are added
+    one at a time, each correcting the errors of the sum of the previous ones.
+      learning_rate 0.03 : each tree only takes a small step (slow, steady learning)
+      subsample 0.8      : each tree sees a random 80% of patients
+      colsample 0.5      : ... and a random half of the features
+      min_child_weight 10, reg_lambda 1 : keep leaves from fitting a few patients
+    XGBoost handles missing values itself (it learns which branch they go to).
+    """
+    import xgboost as xgb
+    return xgb.XGBRegressor(objective="survival:cox", learning_rate=0.03, n_estimators=n_trees,
+                            max_depth=depth, subsample=0.8, colsample_bytree=0.5,
+                            min_child_weight=10, reg_lambda=1.0, tree_method="hist",
+                            n_jobs=2, random_state=seed)
+
+
+def xgb_risk(model, X, n_trees):
+    """Log relative risk using only the first n_trees trees."""
+    return model.predict(X, output_margin=True, iteration_range=(0, n_trees))
+
+
+def fit_xgb_nested(table, cols, n_inner=4):
+    """
+    Choose tree depth and number of trees by an inner centre-grouped CV,
+    then refit on all of `table`. For each depth, one model with the largest
+    number of trees is fitted per inner split, and every smaller number of
+    trees is scored from the same model (the first k trees), which is cheap.
+    Returns: fitted model, chosen depth, chosen number of trees, inner score.
+    """
+    X, y = table[cols], survival_target(table)
+    centres = table["CENTER"].to_numpy()
+    inner = GroupKFold(n_splits=n_inner)
+    best = (-np.inf, None, None)
+    for depth in XGB_DEPTHS:
+        scores = np.zeros(len(XGB_TREES))
+        for tr, va in inner.split(X, groups=centres):
+            model = _xgb(depth, max(XGB_TREES)).fit(X.iloc[tr], xgb_label(table.iloc[tr]))
+            for k, n in enumerate(XGB_TREES):
+                scores[k] += ipcw_c(y[tr], y[va], xgb_risk(model, X.iloc[va], n)) / n_inner
+        k_best = int(np.argmax(scores))
+        if scores[k_best] > best[0]:
+            best = (scores[k_best], depth, XGB_TREES[k_best])
+    inner_score, depth, n_trees = best
+    model = _xgb(depth, n_trees).fit(X, xgb_label(table))
+    return model, depth, n_trees, inner_score
 
 
 # ---------------------------------------------------------------------------

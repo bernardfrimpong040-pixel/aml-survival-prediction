@@ -42,6 +42,7 @@ packages = {
     "sklearn": "scikit-learn",
     "lifelines": "lifelines",
     "sksurv": "scikit-survival",
+    "xgboost": "xgboost-cpu",          # added in Stage 5
 }
 
 print("\nPackages:")

@@ -1,0 +1,6 @@
+{
+  "max_depth": 4,
+  "n_trees": 100,
+  "learning_rate": 0.03,
+  "inner_cv_ipcw_C": 0.7274
+}

@@ -11,16 +11,21 @@ This is my entry to the **QRT × Institut Gustave Roussy data challenge** on
 
 ---
 
-## Results at a glance (IPCW C-index, τ = 7 years, 15 centre-grouped validation folds)
+## Results at a glance
 
-| Model | Mean ± SD | Beats IPSS-R on |
-|---|---|---|
-| IPSS-R clinical score (no fitting) | 0.669 ± 0.029 | — |
-| Benchmark-style Cox (4 variables) | 0.688 ± 0.029 | 13/15 folds |
-| IPSS-M-style Cox (24 variables) | 0.716 ± 0.023 | 15/15 folds |
-| **Elastic-net Cox (84 features)** | **0.722 ± 0.021** | **15/15 folds** |
+IPCW C-index, τ = 7 years, on 15 centre-grouped validation folds (each fold holds out whole
+hospitals), plus the public leaderboard score where submitted.
 
-![Cox models in cross-validation](figures/fig14_cox_cv.png)
+| Model | Cross-validation | Beats IPSS-R on | Public score |
+|---|---|---|---|
+| IPSS-R clinical score (no fitting) | 0.669 ± 0.029 | — | — |
+| Benchmark-style Cox (4 variables) | 0.688 ± 0.029 | 13/15 folds | — |
+| IPSS-M-style Cox (24 variables) | 0.716 ± 0.023 | 15/15 folds | 0.7374 |
+| **Elastic-net Cox (84 features)** | **0.722 ± 0.021** | **15/15 folds** | **0.7543** |
+| Random survival forest (84 features) | 0.719 ± 0.021 | 15/15 folds | — |
+| XGBoost Cox (84 features, nested tuning) | 0.723 ± 0.021 | 15/15 folds | *pending* |
+
+![Tree models vs elastic-net](figures/fig19_tree_cv.png)
 
 ---
 
@@ -91,57 +96,56 @@ To reproduce the work, register for the challenge and place the five files in `d
   and the published **IPSS-R** score.
 - **Different gene panels:** only 64 of 124 training genes appear in the test file, so all
   mutation features use the 64 shared genes. Test splice-site mutations with no label were
-  relabelled, and (Stage 4) 9 test mutations below training's 2% VAF detection floor were
-  dropped.
+  relabelled, and 9 test mutations below training's 2% VAF detection floor were dropped.
 - **The test centre is higher risk:** 33% IPSS-R "very high" against 11% in training.
+- **Centre-grouped CV:** 23 centres dealt into 5 folds in a random order, 3 different
+  repeats = 15 validation folds. **Bug found and fixed:** `StratifiedGroupKFold(shuffle=True)`
+  produced the *same* split for all 3 repeats with only 23 groups. The code now deals the
+  centres itself and checks that the repeats differ.
 
 ![IPSS-R shift](figures/fig12_risk_shift.png)
 
-- **Centre-grouped CV:** 23 centres dealt into 5 folds in a random order, 3 different
-  repeats = 15 validation folds. The unfitted IPSS-R scores **0.669 ± 0.029**.
-- **Bug found and fixed in Stage 4:** the first version used `StratifiedGroupKFold(shuffle=True)`.
-  With only 23 groups it produced the *same* split for all 3 repeats. The fold plot made
-  this visible (every value appeared 3 times). The code now deals centres itself and
-  checks that the repeats differ.
-
 ## Stage 4 — Cox regression
 
-**Model.** The Cox model writes the hazard as h(t | x) = h₀(t) · exp(β₁x₁ + … + βₚxₚ).
-exp(βₖ) is the hazard ratio of feature k, and the linear predictor βᵀx is the risk score
-submitted. The elastic net adds the penalty α(ρ·Σ|βₖ| + (1−ρ)/2·Σβₖ²) to stop over-fitting.
-
-**Honest evaluation.**
-- Imputation and scaling sit inside a `scikit-learn` pipeline, so they are learned on each
-  fold's training part only.
-- The elastic-net penalty (α, ρ) is chosen by an **inner** centre-grouped CV
-  (nested cross-validation).
-- Models are compared **fold by fold** against the IPSS-R score.
-
-| Comparison | Mean paired difference | Folds won |
-|---|---|---|
-| IPSS-M-style Cox − benchmark-style Cox | +0.028 | 14/15 |
-| Elastic-net (84) − IPSS-M-style (24) | +0.006 | 10/15 |
-| Elastic-net + monocytes/flags − elastic-net | −0.0004 | 4/15 |
-
-So the big gain comes from the **feature set**. 84 penalised features add only a little
-over 24 literature-chosen ones, and **monocytes add nothing**, which settles the Stage 1
-concern.
-
-**Hazard ratios** (IPSS-M-style model): TP53 multi-hit **3.21**, MLL-PTD 2.05, FLT3 1.65,
-each step of the IPSS-R cytogenetic scale 1.34. Haemoglobin (0.77 per SD) and platelets
-(0.83 per SD) are protective. SF3B1, protective in Kaplan–Meier, is neutral (1.02) once
-other variables are included.
+- **Model:** h(t | x) = h₀(t) · exp(βᵀx). exp(βₖ) is a hazard ratio, and βᵀx is the
+  submitted risk score. The elastic net adds the penalty α(ρ·Σ|βₖ| + (1−ρ)/2·Σβₖ²).
+- **Honest evaluation:** imputation and scaling inside a pipeline, the penalty chosen by
+  an **inner** centre-grouped CV (nested), and models compared **fold by fold**.
+- **Findings:** the big gain comes from the feature set (IPSS-M-style vs benchmark:
+  +0.028, 14/15 folds). Monocytes add nothing. TP53 multi-hit HR **3.21**. SF3B1 is
+  protective alone but neutral once adjusted (confounding). NPM1 and platelets violate
+  proportional hazards.
 
 ![Hazard ratios](figures/fig15_hazard_ratios.png)
 
-**Proportional hazards.** 4 of 24 variables violate the assumption (p < 0.05). NPM1 is
-harmful in the first months but strongly protective later. The protective effect of
-platelets is concentrated in year 1. This motivates the tree models of Stage 5.
+**Leaderboard lessons.**
+- Both public scores beat cross-validation. The test centre's wide spread of risk makes
+  ranking easier, so the score reflects the centre as much as the model.
+- The gap between the 84-feature and 24-feature models **tripled** at the test centre
+  (+0.006 in CV, +0.017 public). The extra features describe the high-risk end that
+  dominates KYW.
 
-**What 0.72 means.** Patients ranked by a model that never saw their centre: the lowest-risk
-quarter has a median survival of **8.3 years**, the highest-risk quarter **1.1 years**.
+## Stage 5 — machine-learning survival models
 
-![Out-of-fold risk quartiles](figures/fig18_km_oof_quartiles.png)
+- **Random survival forest:** 300 survival trees, splits chosen by the log-rank
+  statistic, risk = predicted cumulative hazard.
+- **XGBoost with a Cox loss:** small trees added one at a time, each fitted to the
+  gradient of the Cox partial likelihood. Tree depth and number of trees were chosen by
+  nested centre-grouped CV. When the first grid's smallest value was picked too often,
+  the grid was widened and the results confirmed.
+
+| Paired comparison (15 folds) | Mean difference | Folds won |
+|---|---|---|
+| XGBoost − elastic-net | +0.001 | 10/15 |
+| Random forest − elastic-net | −0.003 | 4/15 |
+
+**An honest null result:** the trees **tie** the elastic-net. The inner CV kept choosing
+small models, a sign that little structure is left beyond what the engineered features
+(IPSS-R score, cytogenetic categories, TP53 multi-hit) already encode. The three models
+rank test patients very similarly (Spearman 0.96–0.97). All models rank early deaths
+better than late ones, and XGBoost's only edge is at the 1-year horizon.
+
+![C-index by horizon](figures/fig20_horizon.png)
 
 ## Project structure
 
@@ -154,17 +158,18 @@ aml-survival-prediction/
 │   ├── raw/            <- the 5 challenge CSV files go here (not on GitHub)
 │   └── processed/      <- features, CV folds, out-of-fold predictions (not on GitHub)
 ├── src/
-│   ├── config.py               paths, 7-year horizon, random seed, colours, plot style
-│   ├── load_data.py            functions that read the files
-│   ├── features.py             karyotype parser, clinical/molecular features, IPSS-R
-│   ├── cv_utils.py             metric, CV loop, nested elastic-net Cox, IPSS-M gene lists
-│   ├── 01_check_setup.py       Stage 0: checks Python, packages and data files
-│   ├── 02_data_audit.py        Stage 1: data audit
-│   ├── 03_kaplan_meier.py      Stage 2: KM by hand, log-rank, censoring curve
-│   ├── 04_cindex_by_hand.py    Stage 2: C-index and IPCW C-index by hand
-│   ├── 05_build_features.py    Stage 3: features, IPSS-R, centre-grouped CV folds
-│   ├── 06_cox_models.py        Stage 4: Cox models in CV + submission files
-│   └── 07_cox_interpretation.py Stage 4: hazard ratios, PH check, coefficients
+│   ├── config.py                 paths, 7-year horizon, random seed, colours, plot style
+│   ├── load_data.py              functions that read the files
+│   ├── features.py               karyotype parser, clinical/molecular features, IPSS-R
+│   ├── cv_utils.py               metric, CV loop, nested elastic-net and XGBoost, RSF
+│   ├── 01_check_setup.py         Stage 0: checks Python, packages and data files
+│   ├── 02_data_audit.py          Stage 1: data audit
+│   ├── 03_kaplan_meier.py        Stage 2: KM by hand, log-rank, censoring curve
+│   ├── 04_cindex_by_hand.py      Stage 2: C-index and IPCW C-index by hand
+│   ├── 05_build_features.py      Stage 3: features, IPSS-R, centre-grouped CV folds
+│   ├── 06_cox_models.py          Stage 4: Cox models in CV + submission files
+│   ├── 07_cox_interpretation.py  Stage 4: hazard ratios, PH check, coefficients
+│   └── 08_tree_models.py         Stage 5: random survival forest, XGBoost Cox
 ├── figures/            <- PNG figures (used by the README and the paper)
 ├── results/tables/     <- CSV/TXT/JSON summaries
 ├── submissions/        <- files uploaded to Challenge Data (kept local)
@@ -187,14 +192,16 @@ python src/04_cindex_by_hand.py
 python src/05_build_features.py
 python src/06_cox_models.py
 python src/07_cox_interpretation.py
+python src/08_tree_models.py
 ```
 
-`06_cox_models.py` takes about 3 minutes (nested cross-validation).
+`06` and `08` each take a few minutes (nested cross-validation).
 
 **Why `--no-deps` for scikit-survival?** It lists `ecos` as a dependency, but `ecos`
 has no ready-made Windows package for Python 3.13 and would need Microsoft C++ Build
 Tools to compile. `ecos` is only used by one survival-SVM function that this project
 does not use, so scikit-survival is installed without it.
+`xgboost-cpu` is the CPU-only build of XGBoost, a much smaller download than `xgboost`.
 
 ## Stage plan and progress
 
@@ -204,16 +211,18 @@ does not use, so scikit-survival is installed without it.
 | 1 | Data audit: linking, outcome, missing values, centres, mutations, cytogenetics | ✅ done |
 | 2 | Kaplan–Meier curves, log-rank tests, C-index and IPCW C-index computed by hand | ✅ done |
 | 3 | Feature engineering, IPSS-R benchmark, centre-grouped CV folds | ✅ done |
-| 4 | Cox regression: benchmark, IPSS-M-style, elastic-net (nested CV), PH check, first submission | ✅ done |
-| 5 | Machine-learning survival models: gradient-boosted survival, random survival forest | ⏳ next |
-| 6 | Model comparison, ensemble, interpretation, final submission | ⬜ |
+| 4 | Cox regression: benchmark, IPSS-M-style, elastic-net (nested CV), PH check | ✅ done |
+| 5 | Random survival forest and XGBoost Cox (nested CV), C-index by horizon | ✅ done |
+| 6 | Ensemble, permutation importance, final model choice and submission | ⏳ next |
 | 7 | Final write-up | ⬜ |
 
 ## Leaderboard submissions
 
 | Date | File | Model | CV IPCW C-index | Public score |
 |---|---|---|---|---|
-| Oct 2026 | `stage4_elasticnet_cox.csv` | Elastic-net Cox (84 features) | 0.722 ± 0.021 | *to be added* |
+| 23 Oct 2026 | `stage4_elasticnet_cox.csv` | Elastic-net Cox (84 features) | 0.722 ± 0.021 | **0.7543** |
+| 23 Oct 2026 | `stage4_ipssm_cox.csv` | IPSS-M-style Cox (24 variables) | 0.716 ± 0.023 | 0.7374 |
+| — | `stage5_xgboost_cox.csv` | XGBoost Cox (84 features) | 0.723 ± 0.021 | *pending* |
 
 ## References
 
@@ -226,8 +235,12 @@ does not use, so scikit-survival is installed without it.
 - Harrell F. E. *et al.* (1982). Evaluating the yield of medical tests. *JAMA* 247(18).
 - Grambsch P. M. and Therneau T. M. (1994). Proportional hazards tests and diagnostics
   based on weighted residuals. *Biometrika* 81(3).
+- Friedman J. H. (2001). Greedy function approximation: a gradient boosting machine.
+  *The Annals of Statistics* 29(5).
 - Zou H. and Hastie T. (2005). Regularization and variable selection via the elastic net.
   *Journal of the Royal Statistical Society, Series B* 67(2).
+- Ishwaran H. *et al.* (2008). Random survival forests. *The Annals of Applied
+  Statistics* 2(3).
 - Simon N. *et al.* (2011). Regularization paths for Cox's proportional hazards model via
   coordinate descent. *Journal of Statistical Software* 39(5).
 - Uno H. *et al.* (2011). On the C-statistics for evaluating overall adequacy of risk
@@ -236,6 +249,8 @@ does not use, so scikit-survival is installed without it.
   myelodysplastic syndromes. *Blood* 120(12).
 - Schanz J. *et al.* (2012). New comprehensive cytogenetic scoring system for primary
   myelodysplastic syndromes. *Journal of Clinical Oncology* 30(8).
+- Chen T. and Guestrin C. (2016). XGBoost: a scalable tree boosting system.
+  *Proceedings of KDD 2016*.
 - Noren D. P. *et al.* (2016). A crowdsourcing approach to developing and assessing
   prediction algorithms for AML prognosis. *PLOS Computational Biology* 12(6): e1004890.
 - Bernard E. *et al.* (2022). Molecular International Prognostic Scoring System for
