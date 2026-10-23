@@ -1,0 +1,91 @@
+model,code,repeat,fold,ipcw_C
+A. IPSS-R score,A,0,0,0.6745374108303607
+D. Elastic-net Cox,D,0,0,0.7241666309559822
+F. Random survival forest,F,0,0,0.7236862765777989
+G. XGBoost Cox (5 seeds),G,0,0,0.7292207702355373
+E1. Ensemble: elastic-net + XGBoost,E1,0,0,0.7287229705606457
+E2. Ensemble: elastic-net + XGBoost + forest,E2,0,0,0.7284371949262592
+A. IPSS-R score,A,0,1,0.6586776786244771
+D. Elastic-net Cox,D,0,1,0.6957136840122503
+F. Random survival forest,F,0,1,0.6935789453454446
+G. XGBoost Cox (5 seeds),G,0,1,0.6968172845958407
+E1. Ensemble: elastic-net + XGBoost,E1,0,1,0.6981948388558972
+E2. Ensemble: elastic-net + XGBoost + forest,E2,0,1,0.6983305111276101
+A. IPSS-R score,A,0,2,0.7286852140997133
+D. Elastic-net Cox,D,0,2,0.7691671582713224
+F. Random survival forest,F,0,2,0.7737828268268122
+G. XGBoost Cox (5 seeds),G,0,2,0.7667244910661398
+E1. Ensemble: elastic-net + XGBoost,E1,0,2,0.7706673586316489
+E2. Ensemble: elastic-net + XGBoost + forest,E2,0,2,0.7729010224698749
+A. IPSS-R score,A,0,3,0.6285567191881497
+D. Elastic-net Cox,D,0,3,0.7031339635789152
+F. Random survival forest,F,0,3,0.7013294489482432
+G. XGBoost Cox (5 seeds),G,0,3,0.7098361500607666
+E1. Ensemble: elastic-net + XGBoost,E1,0,3,0.7087882056947434
+E2. Ensemble: elastic-net + XGBoost + forest,E2,0,3,0.7073975417908999
+A. IPSS-R score,A,0,4,0.6785513101647425
+D. Elastic-net Cox,D,0,4,0.732499022796781
+F. Random survival forest,F,0,4,0.7192800023069266
+G. XGBoost Cox (5 seeds),G,0,4,0.7355511556984715
+E1. Ensemble: elastic-net + XGBoost,E1,0,4,0.7342001504789216
+E2. Ensemble: elastic-net + XGBoost + forest,E2,0,4,0.7327884087333938
+A. IPSS-R score,A,1,0,0.6705005470552455
+D. Elastic-net Cox,D,1,0,0.7325096991369565
+F. Random survival forest,F,1,0,0.7263641566920087
+G. XGBoost Cox (5 seeds),G,1,0,0.7353048964447559
+E1. Ensemble: elastic-net + XGBoost,E1,1,0,0.7351527488148971
+E2. Ensemble: elastic-net + XGBoost + forest,E2,1,0,0.7341683103589495
+A. IPSS-R score,A,1,1,0.6623326081469592
+D. Elastic-net Cox,D,1,1,0.7157550884889179
+F. Random survival forest,F,1,1,0.7115644069867815
+G. XGBoost Cox (5 seeds),G,1,1,0.7174754811977563
+E1. Ensemble: elastic-net + XGBoost,E1,1,1,0.7172371370100878
+E2. Ensemble: elastic-net + XGBoost + forest,E2,1,1,0.7164835977497624
+A. IPSS-R score,A,1,2,0.6777315464420751
+D. Elastic-net Cox,D,1,2,0.7143419784766838
+F. Random survival forest,F,1,2,0.7160208517189804
+G. XGBoost Cox (5 seeds),G,1,2,0.7194892820667304
+E1. Ensemble: elastic-net + XGBoost,E1,1,2,0.7185034170165775
+E2. Ensemble: elastic-net + XGBoost + forest,E2,1,2,0.7192470255427937
+A. IPSS-R score,A,1,3,0.6839867625421331
+D. Elastic-net Cox,D,1,3,0.7211242501200489
+F. Random survival forest,F,1,3,0.717939336298977
+G. XGBoost Cox (5 seeds),G,1,3,0.7242960123940181
+E1. Ensemble: elastic-net + XGBoost,E1,1,3,0.7245272132954662
+E2. Ensemble: elastic-net + XGBoost + forest,E2,1,3,0.7232085977770542
+A. IPSS-R score,A,1,4,0.623929773498295
+D. Elastic-net Cox,D,1,4,0.7093629673306129
+F. Random survival forest,F,1,4,0.7101895056736074
+G. XGBoost Cox (5 seeds),G,1,4,0.7122873647517955
+E1. Ensemble: elastic-net + XGBoost,E1,1,4,0.7122661306400772
+E2. Ensemble: elastic-net + XGBoost + forest,E2,1,4,0.7141181897178097
+A. IPSS-R score,A,2,0,0.7119505127925024
+D. Elastic-net Cox,D,2,0,0.7635734651925834
+F. Random survival forest,F,2,0,0.7554100970101804
+G. XGBoost Cox (5 seeds),G,2,0,0.7655767945926059
+E1. Ensemble: elastic-net + XGBoost,E1,2,0,0.7666577881385463
+E2. Ensemble: elastic-net + XGBoost + forest,E2,2,0,0.7638795268980458
+A. IPSS-R score,A,2,1,0.6511456053625836
+D. Elastic-net Cox,D,2,1,0.7009765875529465
+F. Random survival forest,F,2,1,0.6964916158313704
+G. XGBoost Cox (5 seeds),G,2,1,0.7013965206909136
+E1. Ensemble: elastic-net + XGBoost,E1,2,1,0.7034689477020764
+E2. Ensemble: elastic-net + XGBoost + forest,E2,2,1,0.702245179279819
+A. IPSS-R score,A,2,2,0.67479437477338
+D. Elastic-net Cox,D,2,2,0.718654206908259
+F. Random survival forest,F,2,2,0.7176250465109854
+G. XGBoost Cox (5 seeds),G,2,2,0.7198233898310717
+E1. Ensemble: elastic-net + XGBoost,E1,2,2,0.722393707433528
+E2. Ensemble: elastic-net + XGBoost + forest,E2,2,2,0.7217284494410285
+A. IPSS-R score,A,2,3,0.6718696291032684
+D. Elastic-net Cox,D,2,3,0.7092867313156135
+F. Random survival forest,F,2,3,0.7093383522481947
+G. XGBoost Cox (5 seeds),G,2,3,0.7103156387119285
+E1. Ensemble: elastic-net + XGBoost,E1,2,3,0.7123594377117165
+E2. Ensemble: elastic-net + XGBoost + forest,E2,2,3,0.7126209454145721
+A. IPSS-R score,A,2,4,0.6323742615889039
+D. Elastic-net Cox,D,2,4,0.7165465270516899
+F. Random survival forest,F,2,4,0.7145367147119683
+G. XGBoost Cox (5 seeds),G,2,4,0.7215918574955907
+E1. Ensemble: elastic-net + XGBoost,E1,2,4,0.7214725072740847
+E2. Ensemble: elastic-net + XGBoost + forest,E2,2,4,0.7203944083538748

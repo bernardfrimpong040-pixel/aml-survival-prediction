@@ -1,0 +1,7 @@
+model,mean_ipcw_C,sd,paired_vs_elasticnet,sd_paired,folds_won_vs_elasticnet
+A. IPSS-R score,0.6686,0.0285,-0.0531,0.0166,-
+D. Elastic-net Cox,0.7218,0.0209,0.0,0.0,-
+F. Random survival forest,0.7191,0.0209,-0.0026,0.0043,4/15
+G. XGBoost Cox (5 seeds),0.7244,0.0202,0.0026,0.0023,14/15
+E1. Ensemble: elastic-net + XGBoost,0.725,0.0205,0.0032,0.0012,15/15
+E2. Ensemble: elastic-net + XGBoost + forest,0.7245,0.0205,0.0027,0.0016,15/15

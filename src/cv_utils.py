@@ -165,6 +165,9 @@ XGB_TREES = (50, 100, 150, 200, 300, 450, 600)  # numbers of trees tried
 #  best value might lie beyond it, so the grid was widened.)
 
 
+XGB_SEEDS = (42, 43, 44, 45, 46)       # the final model averages 5 random seeds (Stage 6)
+
+
 def _xgb(depth, n_trees, seed=config.SEED):
     """
     Gradient boosting with the Cox partial likelihood as loss: trees are added
@@ -174,26 +177,38 @@ def _xgb(depth, n_trees, seed=config.SEED):
       colsample 0.5      : ... and a random half of the features
       min_child_weight 10, reg_lambda 1 : keep leaves from fitting a few patients
     XGBoost handles missing values itself (it learns which branch they go to).
+
+    tree_method="exact" with ONE thread (changed in Stage 6): the faster
+    "hist" method gave slightly different results on Windows and Linux
+    (CV 0.7238 vs 0.7227). "exact" tries every split point, so it is slower
+    but does not depend on the computer.
     """
     import xgboost as xgb
     return xgb.XGBRegressor(objective="survival:cox", learning_rate=0.03, n_estimators=n_trees,
                             max_depth=depth, subsample=0.8, colsample_bytree=0.5,
-                            min_child_weight=10, reg_lambda=1.0, tree_method="hist",
-                            n_jobs=2, random_state=seed)
+                            min_child_weight=10, reg_lambda=1.0, tree_method="exact",
+                            n_jobs=1, random_state=seed)
 
 
-def xgb_risk(model, X, n_trees):
-    """Log relative risk using only the first n_trees trees."""
-    return model.predict(X, output_margin=True, iteration_range=(0, n_trees))
+def xgb_risk(models, X, n_trees):
+    """
+    Log relative risk using only the first n_trees trees.
+    `models` may be one model or a list of models (then their scores are averaged).
+    """
+    if not isinstance(models, (list, tuple)):
+        models = [models]
+    return np.mean([m.predict(X, output_margin=True, iteration_range=(0, n_trees)) for m in models], axis=0)
 
 
-def fit_xgb_nested(table, cols, n_inner=4):
+def fit_xgb_nested(table, cols, n_inner=4, seeds=XGB_SEEDS):
     """
     Choose tree depth and number of trees by an inner centre-grouped CV,
-    then refit on all of `table`. For each depth, one model with the largest
-    number of trees is fitted per inner split, and every smaller number of
-    trees is scored from the same model (the first k trees), which is cheap.
-    Returns: fitted model, chosen depth, chosen number of trees, inner score.
+    then refit on all of `table` once per seed (5 models, averaged when
+    predicting: different random subsamples smooth each other out).
+    For each depth, one model with the largest number of trees is fitted
+    per inner split, and every smaller number of trees is scored from the
+    same model (the first k trees), which is cheap.
+    Returns: list of fitted models, chosen depth, chosen number of trees, inner score.
     """
     X, y = table[cols], survival_target(table)
     centres = table["CENTER"].to_numpy()
@@ -209,8 +224,8 @@ def fit_xgb_nested(table, cols, n_inner=4):
         if scores[k_best] > best[0]:
             best = (scores[k_best], depth, XGB_TREES[k_best])
     inner_score, depth, n_trees = best
-    model = _xgb(depth, n_trees).fit(X, xgb_label(table))
-    return model, depth, n_trees, inner_score
+    models = [_xgb(depth, n_trees, seed=s).fit(X, xgb_label(table)) for s in seeds]
+    return models, depth, n_trees, inner_score
 
 
 # ---------------------------------------------------------------------------
@@ -219,12 +234,16 @@ def fit_xgb_nested(table, cols, n_inner=4):
 def cross_validate(fit_predict, train, folds, n_repeats=3, n_splits=5, verbose_name=None):
     """
     fit_predict(train_part, valid_part) must return risk scores for valid_part.
-    Returns a table: repeat, fold, ipcw_C, harrell_C (15 rows), plus the
-    out-of-fold predictions of repeat 0 (one risk score per training patient).
+    Returns:
+      1. a table: repeat, fold, ipcw_C, harrell_C (15 rows),
+      2. the out-of-fold predictions: one column per repeat ("repeat0",
+         "repeat1", "repeat2"), one risk score per training patient. Each
+         score comes from a model that never saw that patient's centre.
+         (Stage 6 combines these saved predictions into ensembles.)
     """
     y_all = survival_target(train)
     rows = []
-    oof = pd.Series(np.nan, index=train.index)
+    oof = pd.DataFrame(np.nan, index=train.index, columns=[f"repeat{r}" for r in range(n_repeats)])
     for r in range(n_repeats):
         for k in range(n_splits):
             valid = (folds[f"repeat{r}"] == k).to_numpy()
@@ -232,8 +251,17 @@ def cross_validate(fit_predict, train, folds, n_repeats=3, n_splits=5, verbose_n
             rows.append({"repeat": r, "fold": k,
                          "ipcw_C": ipcw_c(y_all[~valid], y_all[valid], risk),
                          "harrell_C": harrell_c(y_all[valid], risk)})
-            if r == 0:
-                oof[valid] = np.asarray(risk, dtype=float)
+            oof.loc[valid, f"repeat{r}"] = np.asarray(risk, dtype=float)
         if verbose_name:
             print(f"  {verbose_name}: repeat {r} done")
     return pd.DataFrame(rows), oof
+
+
+def save_oof(oof_by_model, path):
+    """Save out-of-fold predictions in 'long' form: ID, model, repeat, risk."""
+    parts = []
+    for name, table in oof_by_model.items():
+        long = table.reset_index().melt(id_vars="ID", var_name="repeat", value_name="risk")
+        long.insert(1, "model", name)
+        parts.append(long)
+    pd.concat(parts, ignore_index=True).to_csv(path, index=False)

@@ -25,6 +25,7 @@ Outputs:
   results/tables/cox_cv_pairwise.csv
   results/tables/coxnet_selected.json    (settings of the final elastic-net)
   data/processed/oof_repeat0.csv         (out-of-fold risk scores, used in 07)
+  data/processed/oof_cox.csv             (all 3 repeats, used in Stage 6)
   submissions/stage4_benchmark_cox.csv
   submissions/stage4_ipssm_cox.csv
   submissions/stage4_elasticnet_cox.csv
@@ -110,16 +111,19 @@ MODELS = {
 # ===========================================================================
 # 3. Cross-validation on the 15 centre-grouped folds
 # ===========================================================================
-all_folds, oof = [], {}
+all_folds, oof, oof_all_repeats = [], {}, {}
 for name, fp in MODELS.items():
     print(f"\nEvaluating {name} ...")
-    res, oof_r0 = U.cross_validate(fp, train, folds, verbose_name=name)
+    res, preds = U.cross_validate(fp, train, folds, verbose_name=name)
     res.insert(0, "model", name)
     all_folds.append(res)
-    oof[name] = oof_r0
+    oof[name] = preds["repeat0"]
+    oof_all_repeats[name] = preds
     print(f"  mean IPCW C = {res['ipcw_C'].mean():.4f}  (sd {res['ipcw_C'].std():.4f})")
 cv = pd.concat(all_folds, ignore_index=True)
 cv.to_csv(config.TABLES / "cox_cv_folds.csv", index=False)
+# All 3 repeats of out-of-fold predictions, for the Stage 6 ensembles.
+U.save_oof(oof_all_repeats, config.DATA_PROCESSED / "oof_cox.csv")
 oof_table = pd.DataFrame(oof)
 oof_table["OS_YEARS"] = train["OS_YEARS"]
 oof_table["OS_STATUS"] = train["OS_STATUS"]

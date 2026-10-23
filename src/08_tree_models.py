@@ -7,7 +7,9 @@ the same features, the same 15 centre-grouped folds, the same metric.
 Models:
   F. Random survival forest (RSF)  - 300 survival trees, fixed sensible settings
   G. XGBoost with a Cox loss       - tree depth and number of trees chosen by
-                                     an inner centre-grouped CV (nested CV)
+                                     an inner centre-grouped CV (nested CV);
+                                     since Stage 6: exact method (same result on
+                                     any computer) and an average of 5 seeds
 Compared with:
   A. IPSS-R score and D. elastic-net Cox, read from Stage 4's results
      (same folds file, so the comparison is paired fold by fold).
@@ -29,8 +31,9 @@ Outputs:
   results/tables/xgb_selected.json
   submissions/stage5_rsf.csv
   submissions/stage5_xgboost_cox.csv
+  data/processed/oof_trees.csv           (all 3 repeats, used in Stage 6)
 
-Run from the project's top folder, AFTER 06_cox_models.py (about 3-6 minutes):
+Run from the project's top folder, AFTER 06_cox_models.py (about 10-15 minutes):
     python src/08_tree_models.py
 """
 
@@ -67,9 +70,9 @@ xgb_choices = []          # remember which settings the inner CV picked in each 
 
 
 def xgb_nested(train_part, valid_part):
-    model, depth, n_trees, _ = U.fit_xgb_nested(train_part, FULL)
+    models, depth, n_trees, _ = U.fit_xgb_nested(train_part, FULL)   # 5 seed models
     xgb_choices.append((depth, n_trees))
-    return U.xgb_risk(model, valid_part[FULL], n_trees)
+    return U.xgb_risk(models, valid_part[FULL], n_trees)            # average of the 5
 
 
 MODELS = {"F. Random survival forest": rsf, "G. XGBoost Cox (nested)": xgb_nested}
@@ -77,14 +80,16 @@ MODELS = {"F. Random survival forest": rsf, "G. XGBoost Cox (nested)": xgb_neste
 # ===========================================================================
 # 2. Cross-validation (15 folds)
 # ===========================================================================
-results, oof = [], {}
+results, oof, oof_all_repeats = [], {}, {}
 for name, fp in MODELS.items():
     print(f"\nEvaluating {name} ...")
-    res, oof_r0 = U.cross_validate(fp, train, folds, verbose_name=name)
+    res, preds = U.cross_validate(fp, train, folds, verbose_name=name)
     res.insert(0, "model", name)
     results.append(res)
-    oof[name] = oof_r0
+    oof[name] = preds["repeat0"]
+    oof_all_repeats[name] = preds
     print(f"  mean IPCW C = {res['ipcw_C'].mean():.4f} (sd {res['ipcw_C'].std():.4f})")
+U.save_oof(oof_all_repeats, config.DATA_PROCESSED / "oof_trees.csv")
 
 # Bring in the Stage 4 results on the SAME folds.
 cox = pd.read_csv(config.TABLES / "cox_cv_folds.csv")
@@ -220,6 +225,7 @@ final_rsf = U.make_rsf().fit(train[FULL], y_all)
 final_xgb, depth, n_trees, inner = U.fit_xgb_nested(train, FULL, n_inner=5)
 with open(config.TABLES / "xgb_selected.json", "w", encoding="utf-8") as f:
     json.dump({"max_depth": depth, "n_trees": n_trees, "learning_rate": 0.03,
+               "tree_method": "exact", "seeds": list(U.XGB_SEEDS),
                "inner_cv_ipcw_C": round(float(inner), 4)}, f, indent=2)
 print(f"Final XGBoost: depth {depth}, {n_trees} trees, inner CV C = {inner:.4f}")
 
@@ -238,8 +244,10 @@ for file_name, risk in subs.items():
 # "Gain" = how much the Cox loss improved, in total, from splits on a feature.
 # It shows what the model USES, not cause and effect; correlated features
 # share the credit. Stage 6 will add permutation importance on held-out data.
-gain = pd.Series(final_xgb.get_booster().get_score(importance_type="total_gain"))
-gain = (gain / gain.sum() * 100).reindex(FULL).fillna(0).sort_values(ascending=False)
+# The final XGBoost is 5 models (5 seeds): add up their gains.
+gain = sum(pd.Series(m.get_booster().get_score(importance_type="total_gain")).reindex(FULL).fillna(0)
+           for m in final_xgb)
+gain = (gain / gain.sum() * 100).sort_values(ascending=False)
 gain.round(2).rename("percent_of_total_gain").to_csv(config.TABLES / "xgb_importance.csv")
 print("\nTop 10 features by share of total gain (%):")
 print(gain.head(10).round(1).to_string())

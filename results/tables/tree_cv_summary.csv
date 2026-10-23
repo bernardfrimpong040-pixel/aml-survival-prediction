@@ -2,4 +2,4 @@ model,mean_ipcw_C,sd,min,max,paired_vs_IPSSR,paired_vs_elasticnet,folds_won_vs_e
 A. IPSS-R score (no fitting),0.6686,0.0285,0.6239,0.7287,0.0,-0.0531,-
 D. Elastic-net Cox (84),0.7218,0.0209,0.6957,0.7692,0.0531,0.0,-
 F. Random survival forest,0.7191,0.0209,0.6936,0.7738,0.0505,-0.0026,4/15
-G. XGBoost Cox (nested),0.7238,0.0205,0.697,0.767,0.0552,0.002,11/15
+G. XGBoost Cox (nested),0.7244,0.0202,0.6968,0.7667,0.0557,0.0026,14/15
