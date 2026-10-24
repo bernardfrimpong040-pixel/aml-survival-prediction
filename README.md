@@ -42,8 +42,8 @@ hold out whole hospitals. The public score is the leaderboard result on the unse
 4. **Mutation burden is the strongest signal.** It's the number of mutated genes and their
    VAF, counted only on genes sequenced in *both* hospitals.
 5. **Honest benchmark: the published IPSS-M is as good.** With no fitting at all, the IPSS-M
-   reaches 0.720. The final ensemble is ahead by only +0.005 (corrected 95% CI −0.004 to
-   +0.013), and the recalibrated IPSS-M is slightly better calibrated. This work reproduces
+   reaches 0.720. The final ensemble is ahead by only +0.005 (corrected 95% CI −0.005 to
+   +0.014), and the recalibrated IPSS-M is slightly better calibrated. This work reproduces
    the clinical standard from the challenge data; it does not beat it.
 
 ## Skills demonstrated

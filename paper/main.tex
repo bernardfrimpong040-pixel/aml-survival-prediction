@@ -60,7 +60,7 @@ test centre, the best of all submissions, while XGBoost alone fell to 0.7504. Pe
 importance on held-out centres shows that the mutation burden, counted on the gene panel
 shared by both centres, is the strongest signal. Against the published IPSS-M score,
 computed with no fitting (cross-validated 0.720), no fitted model is statistically better
-(ensemble $+0.005$, 95\% CI $-0.004$ to $+0.013$), and the recalibrated IPSS-M is slightly
+(ensemble $+0.005$, 95\% CI $-0.005$ to $+0.014$), and the recalibrated IPSS-M is slightly
 better calibrated. Domain knowledge, whether built into the features or into the IPSS-M,
 accounts for nearly all of the predictive performance.
 \end{abstract}
@@ -1531,7 +1531,7 @@ with extreme values, and the test centre has many more very high-risk patients. 
 were the cause, XGBoost should rank high-risk patients worse than the elastic-net in
 cross-validation too. Table~\ref{tab:subg} shows the opposite. Inside the IPSS-R
 very-high-risk subgroup, XGBoost ranks patients better than the elastic-net (0.623 against
-0.608, winning 13 of 15 folds), and elsewhere the two are close. Two explanations remain
+0.608, winning 11 of 15 folds), and elsewhere the two are close. Two explanations remain
 untested. The first is chance: the public score uses only part of one centre, so a
 difference of 0.004 is within its sampling noise. The second is a measurement shift at the
 test centre: trees rely on sharp thresholds (for example, ``haemoglobin below 9.1''), so a
@@ -1548,11 +1548,11 @@ mean over folds with enough deaths to score).}
 \toprule
 Subgroup & Patients & Elastic-net & XGBoost & Difference & XGBoost wins \\
 \midrule
-IPSS-R very high ($>6$)          & 363   & 0.608 & 0.623 & $+0.014$ & 13/15 \\
-IPSS-R high or very high ($>4.5$) & 822   & 0.635 & 0.642 & $+0.007$ & 8/15  \\
-Blasts $\ge 10\%$                & 663   & 0.658 & 0.661 & $+0.004$ & 6/15  \\
-Complex karyotype                & 307   & 0.676 & 0.675 & $-0.000$ & 7/14  \\
-All others (IPSS-R $\le 4.5$)    & 2{,}351 & 0.689 & 0.691 & $+0.001$ & 11/15 \\
+IPSS-R very high ($>6$)          & 363   & 0.608 & 0.623 & $+0.015$ & 11/15 \\
+IPSS-R high or very high ($>4.5$) & 822   & 0.635 & 0.643 & $+0.007$ & 7/15  \\
+Blasts $\ge 10\%$                & 663   & 0.658 & 0.662 & $+0.004$ & 7/15  \\
+Complex karyotype                & 307   & 0.676 & 0.674 & $-0.001$ & 7/14  \\
+All others (IPSS-R $\le 4.5$)    & 2{,}351 & 0.689 & 0.691 & $+0.001$ & 9/15  \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1573,11 +1573,7 @@ cross-validation and the leaderboard was used only as a check.
 % ==================================================================
 This section adds what a journal reviewer would ask for: a comparison with the current
 clinical standard, confidence intervals, time-dependent discrimination, calibration, and
-a description of the cohort. The numbers in this section come from a verification run on Linux.
-Quantities involving XGBoost or the ensemble can differ from the Windows run of
-Sections~\ref{sec:trees}--\ref{sec:ensemble} by about 0.0002 (Section~\ref{sec:trees}), so
-for example XGBoost's paired gain over the elastic-net appears here as $+0.002$ rather than
-$+0.003$. No conclusion is affected.
+a description of the cohort. As everywhere in this report, all numbers come from the author's run.
 
 \subsection{The cohort}
 Table~\ref{tab:table1} describes both cohorts. Sex is not recorded in the data and was
@@ -1711,16 +1707,16 @@ Quantity & Estimate & 95\% CI & $p$ \\
 IPSS-R                               & 0.669 & 0.634 to 0.703 & \\
 IPSS-M                               & 0.720 & 0.693 to 0.748 & \\
 Elastic-net Cox                      & 0.722 & 0.696 to 0.747 & \\
-XGBoost Cox                          & 0.724 & 0.699 to 0.749 & \\
+XGBoost Cox                          & 0.724 & 0.700 to 0.749 & \\
 Ensemble (final)                     & 0.725 & 0.700 to 0.750 & \\
 \midrule
 IPSS-M vs IPSS-R                     & $+0.052$  & $+0.037$ to $+0.066$  & $<0.001$ \\
 IPSS-M-style Cox vs benchmark        & $+0.028$  & $+0.010$ to $+0.045$  & 0.004 \\
 Elastic-net vs IPSS-R                & $+0.053$  & $+0.033$ to $+0.073$  & $<0.001$ \\
 Elastic-net vs IPSS-M                & $+0.002$  & $-0.007$ to $+0.011$  & 0.71 \\
-XGBoost vs elastic-net               & $+0.002$  & $-0.001$ to $+0.005$  & 0.10 \\
-Ensemble vs elastic-net              & $+0.003$  & $+0.002$ to $+0.004$  & $<0.001$ \\
-Ensemble vs IPSS-M                   & $+0.005$  & $-0.004$ to $+0.013$  & 0.28 \\
+XGBoost vs elastic-net               & $+0.003$  & $-0.000$ to $+0.005$  & 0.07 \\
+Ensemble vs elastic-net              & $+0.003$  & $+0.002$ to $+0.005$  & $<0.001$ \\
+Ensemble vs IPSS-M                   & $+0.005$  & $-0.005$ to $+0.014$  & 0.29 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1758,7 +1754,7 @@ Model & 1 year & 3 years & 5 years \\
 IPSS-R             & 0.723 & 0.742 & 0.725 \\
 IPSS-M             & 0.777 & 0.803 & 0.803 \\
 Elastic-net Cox    & 0.773 & 0.803 & 0.803 \\
-XGBoost Cox        & 0.779 & 0.802 & 0.804 \\
+XGBoost Cox        & 0.780 & 0.802 & 0.804 \\
 Ensemble (final)   & 0.779 & 0.805 & 0.806 \\
 \bottomrule
 \end{tabular}
