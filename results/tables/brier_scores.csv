@@ -1,0 +1,4 @@
+model,integrated_brier,brier_3y
+Kaplan-Meier (no features),0.2113,0.243
+IPSS-M (recalibrated),0.1603,0.178
+Elastic-net Cox,0.1629,0.1812

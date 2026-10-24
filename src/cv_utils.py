@@ -88,14 +88,16 @@ def make_cox(ridge=0.1):
                          CoxPHSurvivalAnalysis(alpha=ridge))
 
 
-def _coxnet(l1_ratio, alphas=None):
+def _coxnet(l1_ratio, alphas=None, fit_baseline=False):
+    """fit_baseline=True also stores the baseline survival curve S0(t), so the
+    model can predict survival PROBABILITIES (needed for calibration, Stage 8)."""
     return make_pipeline(
         SimpleImputer(strategy="median"), StandardScaler(),
         CoxnetSurvivalAnalysis(l1_ratio=l1_ratio, alphas=alphas, alpha_min_ratio=0.01,
-                               n_alphas=30, max_iter=100000))
+                               n_alphas=30, max_iter=100000, fit_baseline_model=fit_baseline))
 
 
-def fit_coxnet_nested(X, y, centres, l1_ratios=(0.1, 0.5, 1.0), n_inner=4):
+def fit_coxnet_nested(X, y, centres, l1_ratios=(0.1, 0.5, 1.0), n_inner=4, fit_baseline=False):
     """
     Elastic-net Cox with its two settings chosen by an inner grouped CV:
       l1_ratio : 1 = lasso (many coefficients exactly 0), small = close to ridge
@@ -123,7 +125,7 @@ def fit_coxnet_nested(X, y, centres, l1_ratios=(0.1, 0.5, 1.0), n_inner=4):
         if scores[k_best] > best[0]:
             best = (scores[k_best], l1, grid, grid[k_best])
     inner_score, l1, grid, alpha = best
-    model = _coxnet(l1, alphas=grid).fit(X, y)
+    model = _coxnet(l1, alphas=grid, fit_baseline=fit_baseline).fit(X, y)
     return model, alpha, l1, inner_score
 
 

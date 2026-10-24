@@ -1,0 +1,16 @@
+model,years,mean,std
+Elastic-net Cox,1.0,0.7734,0.0338
+Elastic-net Cox,3.0,0.8025,0.0138
+Elastic-net Cox,5.0,0.8027,0.0382
+Ensemble (final),1.0,0.779,0.033
+Ensemble (final),3.0,0.8046,0.0126
+Ensemble (final),5.0,0.806,0.0371
+IPSS-M,1.0,0.7767,0.0382
+IPSS-M,3.0,0.8026,0.0142
+IPSS-M,5.0,0.8031,0.0357
+IPSS-R,1.0,0.7234,0.0385
+IPSS-R,3.0,0.742,0.0209
+IPSS-R,5.0,0.7248,0.0301
+XGBoost Cox,1.0,0.7799,0.0325
+XGBoost Cox,3.0,0.8018,0.0125
+XGBoost Cox,5.0,0.8036,0.0353

@@ -1,0 +1,6 @@
+comparison,mean_ipcw_C,sd,mean_diff,sd_diff,folds_won
+IPSS-M score (no fitting),0.7202,0.0225,,,-
+IPSS-R score minus IPSS-M,0.6686,0.0285,-0.0516,0.012,0/15
+Elastic-net Cox minus IPSS-M,0.7218,0.0209,0.0016,0.0073,10/15
+XGBoost Cox (5 seeds) minus IPSS-M,0.7242,0.0204,0.004,0.0077,10/15
+Ensemble (final) minus IPSS-M,0.7248,0.0206,0.0046,0.0071,11/15

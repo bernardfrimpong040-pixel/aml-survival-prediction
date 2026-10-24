@@ -1,0 +1,7 @@
+category,train_pct,test_pct,patients,median_years,S_at_3_years
+Very low,11.3,3.6,358,9.65,0.867
+Low,29.8,15.6,945,5.96,0.74
+Moderate low,11.7,9.3,370,4.29,0.624
+Moderate high,10.5,10.0,334,2.65,0.463
+High,15.8,20.1,500,1.68,0.272
+Very high,21.0,41.4,666,1.03,0.146

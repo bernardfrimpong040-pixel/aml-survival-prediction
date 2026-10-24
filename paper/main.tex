@@ -58,8 +58,11 @@ elastic-net and XGBoost reaches 0.725 and beats the elastic-net on all 15 folds.
 as the final model before its public score was known, it scored 0.7552 on the unseen
 test centre, the best of all submissions, while XGBoost alone fell to 0.7504. Permutation
 importance on held-out centres shows that the mutation burden, counted on the gene panel
-shared by both centres, is the strongest signal. Overall, feature engineering contributed
-far more than the choice of algorithm.
+shared by both centres, is the strongest signal. Against the published IPSS-M score,
+computed with no fitting (cross-validated 0.720), no fitted model is statistically better
+(ensemble $+0.005$, 95\% CI $-0.004$ to $+0.013$), and the recalibrated IPSS-M is slightly
+better calibrated. Domain knowledge, whether built into the features or into the IPSS-M,
+accounts for nearly all of the predictive performance.
 \end{abstract}
 
 % ==================================================================
@@ -1565,6 +1568,270 @@ cross-validation and the test centre. That is why models were chosen by paired
 cross-validation and the leaderboard was used only as a check.
 
 % ==================================================================
+\section{Benchmarks, uncertainty and calibration (Stage 8)}
+\label{sec:stage8}
+% ==================================================================
+This section adds what a journal reviewer would ask for: a comparison with the current
+clinical standard, confidence intervals, time-dependent discrimination, calibration, and
+a description of the cohort. The numbers in this section come from a verification run on Linux.
+Quantities involving XGBoost or the ensemble can differ from the Windows run of
+Sections~\ref{sec:trees}--\ref{sec:ensemble} by about 0.0002 (Section~\ref{sec:trees}), so
+for example XGBoost's paired gain over the elastic-net appears here as $+0.002$ rather than
+$+0.003$. No conclusion is affected.
+
+\subsection{The cohort}
+Table~\ref{tab:table1} describes both cohorts. Sex is not recorded in the data and was
+inferred from the karyotype (XX female, XY or loss of Y male); it is unknown for more
+test patients because many test karyotypes are recorded only as ``Normal'' or ``complex''.
+
+\begin{table}[H]
+\centering
+\caption{Characteristics of the training cohort (patients with a recorded outcome) and
+the test centre. Median (first--third quartile) or $n$ (\%).}
+\label{tab:table1}
+\small
+\begin{tabular}{lll}
+\toprule
+Characteristic & Training (23 centres) & Test (centre KYW) \\
+\midrule
+Patients                                   & 3{,}173         & 1{,}193 \\
+Sex (inferred): female / male / unknown    & 33.3 / 52.7 / 14.0\% & 17.1 / 45.8 / 37.1\% \\
+Deaths                                     & 1{,}600 (50.4)  & not available \\
+Median overall survival, years             & 3.15            & not available \\
+Median follow-up (reverse Kaplan--Meier), years & 3.84       & not available \\
+\midrule
+Bone-marrow blasts, \%                     & 3.0 (1.0--8.0)   & 6.0 (2.0--17.0) \\
+Haemoglobin, g/dL                          & 9.7 (8.5--11.1)  & 8.4 (7.4--10.1) \\
+Platelets, G/L                             & 123 (65--230)    & 74 (37--143) \\
+White blood cells, G/L                     & 4.1 (2.7--6.7)   & 2.9 (1.9--5.3) \\
+Neutrophils, G/L                           & 2.00 (1.00--3.70) & 1.30 (0.54--2.64) \\
+\midrule
+Karyotype missing or unusable              & 350 (11.0)      & 120 (10.1) \\
+Normal karyotype                           & 1{,}643 (51.8)  & 410 (34.4) \\
+Complex karyotype                          & 307 (9.7)       & 336 (28.2) \\
+IPSS-R cytogenetics poor or very poor      & 408 (12.9)      & 380 (31.9) \\
+\midrule
+Mutated genes per patient (shared panel)   & 2 (1--4)        & 2 (1--3) \\
+TP53 multi-hit (IPSS-M definition)         & 210 (6.6)       & 213 (17.9) \\
+\textit{SF3B1} mutated                     & 727 (22.9)      & 92 (7.7) \\
+\midrule
+IPSS-R very high risk                      & 363 (11.4)      & 395 (33.1) \\
+IPSS-M very high risk                      & 666 (21.0)      & 494 (41.4) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The IPSS-M as benchmark}
+The Molecular International Prognostic Scoring System (IPSS-M)~\cite{bernard2022} is the
+current clinical standard for myelodysplastic syndromes. It combines haemoglobin,
+platelets, blasts, the IPSS-R cytogenetic category, TP53 multi-hit status, MLL-PTD, FLT3
+and 17 other genes with published weights:
+\begin{equation}
+\text{IPSS-M} = \frac{1}{\ln 2}\sum_{k} \beta_k\,\left(x_k - \mu_k\right),
+\label{eq:ipssm}
+\end{equation}
+where $\beta_k$ is the published coefficient of variable $k$ and $\mu_k$ its reference
+mean. Blasts are capped at 20\% and divided by 5, platelets capped at 250 G/L and divided
+by 100, and the residual genes enter as their count capped at 2. The weights were taken
+from the authors' open-source calculator~\cite{ipssmcalc}. A missing input receives its
+reference mean, so it contributes nothing; only published constants are used, and nothing
+is learned from these data. The implementation was checked against the official
+calculator on 300 training patients with complete data: all 300 scores agreed exactly.
+One deviation is unavoidable: copy-neutral loss of heterozygosity of TP53 is not
+available, so a single TP53 mutation counts as multi-hit only with VAF above 0.55 or a 17p
+loss.
+
+\paragraph{An important caveat.} The IPSS-M was developed on 2{,}957 patients of the
+International Working Group for Prognosis in MDS, an international consortium that very
+probably overlaps with this challenge's 23 training centres (the challenge is run with the
+institute of the IPSS-M's first author). If so, its weights were partly fitted to these
+patients, and its scores on the training data are partly in-sample and therefore
+optimistic. Its fair comparison is on the test centre.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig25_ipssm.png}
+\caption{Left: survival by IPSS-M category in the training data. Right: share of patients
+in each category, training against test.}
+\label{fig:ipssm}
+\end{figure}
+
+The six IPSS-M categories separate survival very clearly (log-rank $\chi^2 = 974.2$ on 5
+degrees of freedom, against 737.4 on 4 for the IPSS-R), from a median of 9.65 years in the
+very low group to 1.03 years in the very high group (Figure~\ref{fig:ipssm}). At the test
+centre, 41\% of patients are IPSS-M very high risk, against 21\% in training.
+
+\begin{table}[H]
+\centering
+\caption{The IPSS-M against fitted models on the same 15 centre-grouped folds (positive:
+the fitted model is better).}
+\label{tab:ipssmcv}
+\begin{tabular}{lrrr}
+\toprule
+Comparison & Mean C & Paired difference & Folds won \\
+\midrule
+IPSS-M score (no fitting)          & 0.720 & --        & --    \\
+IPSS-R score minus IPSS-M          & 0.669 & $-0.052$  & 0/15  \\
+Elastic-net Cox minus IPSS-M       & 0.722 & $+0.002$  & 10/15 \\
+XGBoost Cox minus IPSS-M           & 0.724 & $+0.004$  & 10/15 \\
+Ensemble (final) minus IPSS-M      & 0.725 & $+0.005$  & 11/15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:ipssmcv} gives the central result of this section. With no fitting at all,
+the IPSS-M reaches 0.720, essentially the level of every model fitted in this work. The
+final ensemble is ahead by only 0.005 on average and wins 11 of 15 folds. Since the IPSS-M
+may itself be partly in-sample here, the comparison is uncertain in both directions.
+
+\subsection{Confidence intervals}
+The 15 cross-validation scores are not independent: the three repetitions reuse the same
+patients, and the training sets of different folds overlap. The naive standard error
+$s/\sqrt{J}$ (with $J = 15$ folds and $s$ the standard deviation across folds) is
+therefore too small. The corrected resampled $t$-test of Nadeau and
+Bengio~\cite{nadeau2003} inflates the variance to
+\[
+\widehat{\operatorname{Var}} = \left(\frac{1}{J} + \frac{n_{\text{valid}}}{n_{\text{train}}}\right) s^2
+= \left(\frac{1}{15} + 0.257\right) s^2 = 0.323\, s^2,
+\]
+where $0.257$ is the average ratio of validation to training patients. Since
+$\sqrt{0.323/0.067} = 2.2$, the corrected standard error is about 2.2 times the naive one.
+Intervals use the $t$ distribution with 14 degrees of freedom ($t_{0.975} = 2.145$).
+
+\begin{table}[H]
+\centering
+\caption{Cross-validated IPCW C-index and paired differences with corrected 95\%
+confidence intervals and two-sided $p$-values.}
+\label{tab:ci}
+\small
+\begin{tabular}{lrcr}
+\toprule
+Quantity & Estimate & 95\% CI & $p$ \\
+\midrule
+IPSS-R                               & 0.669 & 0.634 to 0.703 & \\
+IPSS-M                               & 0.720 & 0.693 to 0.748 & \\
+Elastic-net Cox                      & 0.722 & 0.696 to 0.747 & \\
+XGBoost Cox                          & 0.724 & 0.699 to 0.749 & \\
+Ensemble (final)                     & 0.725 & 0.700 to 0.750 & \\
+\midrule
+IPSS-M vs IPSS-R                     & $+0.052$  & $+0.037$ to $+0.066$  & $<0.001$ \\
+IPSS-M-style Cox vs benchmark        & $+0.028$  & $+0.010$ to $+0.045$  & 0.004 \\
+Elastic-net vs IPSS-R                & $+0.053$  & $+0.033$ to $+0.073$  & $<0.001$ \\
+Elastic-net vs IPSS-M                & $+0.002$  & $-0.007$ to $+0.011$  & 0.71 \\
+XGBoost vs elastic-net               & $+0.002$  & $-0.001$ to $+0.005$  & 0.10 \\
+Ensemble vs elastic-net              & $+0.003$  & $+0.002$ to $+0.004$  & $<0.001$ \\
+Ensemble vs IPSS-M                   & $+0.005$  & $-0.004$ to $+0.013$  & 0.28 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{fig26_paired_ci.png}
+\caption{Paired differences in IPCW C-index with corrected 95\% confidence intervals.}
+\label{fig:ci}
+\end{figure}
+
+The intervals (Table~\ref{tab:ci}, Figure~\ref{fig:ci}) sort the comparisons clearly.
+The gains from clinical knowledge are large and certain: the IPSS-M and the fitted models
+beat the IPSS-R by about 0.05, and the literature-chosen features beat the benchmark
+variables by 0.028. The ensemble's gain over the elastic-net is tiny (0.003) but
+consistent enough to exclude zero. No fitted model is distinguishable from the IPSS-M:
+every interval includes zero.
+
+\subsection{Time-dependent AUC}
+The cumulative/dynamic AUC at time $t$~\cite{hung2010} asks: among patients who died by
+year $t$ and those still alive after it, how often does the score rank the death higher? It
+was computed on all 15 folds, with IPCW weights estimated on each training part.
+Validation follow-up was censored at 6.5 years, because some validation patients are
+followed for longer than anyone in the corresponding training part, where the censoring
+curve reaches zero; no reported time exceeds 6 years.
+
+\begin{table}[H]
+\centering
+\caption{Time-dependent AUC (mean over 15 folds).}
+\label{tab:tdauc}
+\begin{tabular}{lrrr}
+\toprule
+Model & 1 year & 3 years & 5 years \\
+\midrule
+IPSS-R             & 0.723 & 0.742 & 0.725 \\
+IPSS-M             & 0.777 & 0.803 & 0.803 \\
+Elastic-net Cox    & 0.773 & 0.803 & 0.803 \\
+XGBoost Cox        & 0.779 & 0.802 & 0.804 \\
+Ensemble (final)   & 0.779 & 0.805 & 0.806 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig27_time_auc.png}
+\caption{Time-dependent AUC at 1, 3 and 5 years (mean of 15 folds).}
+\label{fig:tdauc}
+\end{figure}
+
+At every horizon the fitted models and the IPSS-M are within 0.006 of each other and
+about 0.05--0.08 above the IPSS-R (Table~\ref{tab:tdauc}, Figure~\ref{fig:tdauc}). The
+models discriminate better at three and five years (AUC about 0.80) than at one year
+(about 0.78).
+
+\subsection{Brier score and calibration}
+The C-index only judges the ranking. A clinician also needs predicted
+\emph{probabilities} to be right: of 100 patients given a 60\% chance of surviving three
+years, about 60 should survive. Three models giving survival probabilities were compared
+on the five folds of the first repetition: a Kaplan--Meier curve with no features (a
+reference), the IPSS-M recalibrated, and the elastic-net Cox with its Breslow baseline
+survival. ``Recalibrated'' means a one-variable Cox model on the IPSS-M score, fitted on
+each training part: the IPSS-M weights stay published, and only the link from score to
+probability is estimated. The Brier score~\cite{graf1999} at time $t$ is the average
+squared difference between the predicted survival probability and the observed status
+(alive or dead) at $t$, weighted by IPCW; the integrated Brier score averages it over 0.25
+to 6 years. Lower is better.
+
+\begin{table}[H]
+\centering
+\caption{Brier scores (lower is better; mean of five folds) and mean absolute calibration
+error at three years over ten risk groups.}
+\label{tab:brier}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Model & Integrated Brier & Brier at 3 years & Calibration error at 3 years \\
+\midrule
+Kaplan--Meier (no features)  & 0.211 & 0.243 & -- \\
+IPSS-M (recalibrated)        & \textbf{0.160} & \textbf{0.178} & \textbf{0.050} \\
+Elastic-net Cox              & 0.163 & 0.181 & 0.065 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{fig28_calibration.png}
+\caption{Calibration at three years: mean predicted against observed (Kaplan--Meier)
+survival in ten groups of out-of-fold predicted risk.}
+\label{fig:cal}
+\end{figure}
+
+Both models reduce the Brier score by about a quarter compared with the no-feature
+reference (Table~\ref{tab:brier}). The recalibrated IPSS-M is slightly better calibrated
+than the elastic-net (Figure~\ref{fig:cal}). The elastic-net's predictions are compressed
+towards the middle: its predicted three-year survival spans 0.08 to 0.74, while the
+observed survival of its risk groups spans 0.08 to 0.85, so low-risk patients do better
+than predicted. Such compression is the expected effect of a penalty that shrinks the
+coefficients towards zero, and it could be corrected by recalibrating the model's linear
+predictor, as was done for the IPSS-M.
+
+\subsection{Summary of Stage 8}
+Against the IPSS-R, every fitted model is clearly and significantly better. Against the
+IPSS-M, a published score with no fitting, they are statistically indistinguishable in
+discrimination, and the IPSS-M is slightly better calibrated. Since the IPSS-M was very
+probably developed partly on these same patients, its scores here may be optimistic; the
+test-centre comparison (an upload of the IPSS-M score to the leaderboard) is the fairest
+available check.
+
+% ==================================================================
 \section{Discussion}
 % ==================================================================
 
@@ -1575,6 +1842,10 @@ clinical literature (IPSS-R cytogenetics, IPSS-M genes, TP53 multi-hit, MLL-PTD)
 features, boosted trees and the ensemble, added at most 0.006 more. Permutation importance
 confirms the point: the strongest signal is the mutation burden, a simple count that only
 became comparable across centres once it was restricted to the shared gene panel.
+The published IPSS-M, which encodes the same expert knowledge in fixed weights, performs
+as well as every fitted model here (Section~\ref{sec:stage8}). The honest conclusion is
+that this work reproduces the performance of the current clinical standard from the
+challenge data, with transparent and validated code, but does not surpass it.
 
 \paragraph{Validation that matches the test.} The test set is a hospital never seen in
 training, so every model was validated on held-out hospitals and compared fold by fold on
@@ -1603,6 +1874,9 @@ protective later, a violation of proportional hazards that its single Cox coeffi
 \section{Limitations}
 % ==================================================================
 \begin{itemize}
+  \item \textbf{Overlap with the IPSS-M cohort.} The training data very probably overlap
+        with the cohort on which the IPSS-M was developed. Its cross-validated scores here
+        may be optimistic, and the data are not new to the field.
   \item \textbf{One external centre.} The test set comes from a single hospital, and the
         public score uses only part of it. Conclusions about how the models transfer rest
         on this one centre; the private leaderboard, updated on 15~June and 15~December,
@@ -1631,14 +1905,17 @@ protective later, a violation of proportional hazards that its single Cox coeffi
 % ==================================================================
 \section{Conclusion}
 % ==================================================================
-For adult myeloid leukemia, a carefully engineered set of clinical, cytogenetic and
+For adult myeloid neoplasms, a carefully engineered set of clinical, cytogenetic and
 molecular features, validated on held-out hospitals, predicts overall survival with an IPCW
-C-index of about 0.72 in cross-validation and 0.755 on an unseen test centre. That is
-about 0.05 better than the published IPSS-R clinical score. A rank-averaged ensemble of an
-elastic-net Cox model and a gradient-boosted Cox model, chosen by paired cross-validation
-before its public score was known, was the best model both in cross-validation and on the
-test centre. The main lesson is that domain knowledge and a validation design that mirrors
-the real test mattered more than the choice of algorithm.
+C-index of about 0.72 in cross-validation and 0.755 on an unseen test centre, about 0.05
+better than the IPSS-R clinical score. The final model, a rank-averaged ensemble of an
+elastic-net Cox and a gradient-boosted Cox model, was chosen by paired cross-validation
+before its public score was known, and it was the best submitted model on the test centre.
+It does not, however, measurably improve on the published IPSS-M, which reaches the same
+discrimination with no fitting and slightly better calibration. The main lessons are that
+domain knowledge and a validation design that mirrors the real test mattered far more than
+the choice of algorithm, and that a new model should always be compared with the strongest
+existing clinical score before any claim of improvement.
 
 % ==================================================================
 \begin{thebibliography}{99}
@@ -1738,6 +2015,26 @@ Random forests,
 E.~Bernard \textit{et al.},
 Molecular International Prognostic Scoring System for myelodysplastic syndromes,
 \textit{NEJM Evidence}, 1(7): EVIDoa2200008, 2022.
+
+\bibitem{ipssmcalc}
+Papaemmanuil Lab,
+\texttt{ipssm}: IPSS-M risk calculator, JavaScript package version 1.0.4 (MIT licence),
+\url{https://www.npmjs.com/package/ipssm}, 2023.
+
+\bibitem{nadeau2003}
+C.~Nadeau and Y.~Bengio,
+Inference for the generalization error,
+\textit{Machine Learning}, 52(3): 239--281, 2003.
+
+\bibitem{hung2010}
+H.~Hung and C.-T. Chiang,
+Estimation methods for time-dependent AUC models with survival data,
+\textit{Canadian Journal of Statistics}, 38(1): 8--26, 2010.
+
+\bibitem{graf1999}
+E.~Graf, C.~Schmoor, W.~Sauerbrei and M.~Schumacher,
+Assessment and comparison of prognostic classification schemes for survival data,
+\textit{Statistics in Medicine}, 18(17--18): 2529--2545, 1999.
 
 \end{thebibliography}
 
