@@ -14,8 +14,8 @@ F. Random survival forest,2,0.7512
 F. Random survival forest,3,0.7422
 F. Random survival forest,5,0.7317
 F. Random survival forest,7,0.7223
-G. XGBoost Cox (nested),1,0.7624
-G. XGBoost Cox (nested),2,0.7566
-G. XGBoost Cox (nested),3,0.7459
-G. XGBoost Cox (nested),5,0.7354
-G. XGBoost Cox (nested),7,0.7276
+G. XGBoost Cox (nested),1,0.7623
+G. XGBoost Cox (nested),2,0.7563
+G. XGBoost Cox (nested),3,0.746
+G. XGBoost Cox (nested),5,0.7353
+G. XGBoost Cox (nested),7,0.7273

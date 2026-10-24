@@ -24,7 +24,7 @@
 Kaplan--Meier, Cox Regression and Machine-Learning Survival Models}
 \author{Bernard Frimpong\\
 \small M.S. Applied Mathematics, University of Akron}
-\date{Working draft --- Stage 6 (ensemble and interpretation), October 2026}
+\date{October 2026}
 
 \begin{document}
 \maketitle
@@ -51,13 +51,15 @@ gene list reaches 0.716 and an elastic-net Cox model on 84 features 0.722, each 
 the IPSS-R on all 15 folds. Monocyte counts, missing in 74\% of test patients, add
 nothing. Hazard ratios agree with clinical knowledge (TP53 multi-hit HR 3.2), and the
 proportional-hazards assumption is violated mainly by \textit{NPM1} and platelets, whose
-effects change over time. On the public leaderboard the elastic-net scores 0.7543. Tree
-models add little: a random survival forest reaches 0.719, and XGBoost with a Cox loss,
-tuned by nested cross-validation and averaged over five seeds, 0.724, a small but
-consistent gain (13 of 15 folds). A rank average of the elastic-net and XGBoost reaches
-0.725 and beats the elastic-net on all 15 folds. It is the final model. Permutation
+effects change over time. Tree models add little: a random survival forest reaches 0.719,
+and XGBoost with a Cox loss, tuned by nested cross-validation and averaged over five
+seeds, reaches 0.724, a small but consistent gain (14 of 15 folds). A rank average of the
+elastic-net and XGBoost reaches 0.725 and beats the elastic-net on all 15 folds. Chosen
+as the final model before its public score was known, it scored 0.7552 on the unseen
+test centre, the best of all submissions, while XGBoost alone fell to 0.7504. Permutation
 importance on held-out centres shows that the mutation burden, counted on the gene panel
-shared by both centres, is the models' strongest signal.
+shared by both centres, is the strongest signal. Overall, feature engineering contributed
+far more than the choice of algorithm.
 \end{abstract}
 
 % ==================================================================
@@ -1225,11 +1227,16 @@ approximate (``histogram'') split finding with two threads. Run on Linux and on 
 with the same XGBoost version (3.4.1), every other model in this report gave identical
 results, but XGBoost did not: a cross-validated mean of 0.7227 on one machine and 0.7238 on
 the other, with different depths chosen in some folds. That difference (0.001) was as large
-as XGBoost's whole advantage over the elastic-net at the time. The final version therefore
-uses exact split finding on a single thread, which does not depend on the computer, and
-averages five models with different random seeds (42 to 46) at the depth and number of
-trees chosen by the inner cross-validation. Averaging seeds smooths out the randomness of
-the row and column subsampling.
+as XGBoost's whole advantage over the elastic-net at the time. The final version uses exact
+split finding on a single thread and averages five models with different random seeds
+(42 to 46) at the depth and number of trees chosen by the inner cross-validation. Each
+machine now reproduces its own results exactly. A small difference between machines
+remains, because the random row and column subsampling relies on random-number routines
+of the C++ standard library, which the Windows and Linux compilers implement differently.
+It shrank to 0.0002 in every summary (for example, the ensemble of Section~\ref{sec:ensemble}
+gains $+0.0032$ over the elastic-net on Windows and $+0.0030$ on Linux, winning 15 of 15
+folds on both), and no conclusion depends on it. All numbers for XGBoost and the
+ensembles in this report are from the author's Windows run.
 
 \subsection{Results}
 
@@ -1245,7 +1252,7 @@ Model & Mean & SD & Range & Paired vs D & Folds won vs D \\
 A. IPSS-R score              & 0.669 & 0.029 & 0.624--0.729 & $-0.053$  & --    \\
 D. Elastic-net Cox           & 0.722 & 0.021 & 0.696--0.769 & --        & --    \\
 F. Random survival forest    & 0.719 & 0.021 & 0.694--0.774 & $-0.003$  & 4/15  \\
-G. XGBoost Cox (5 seeds)     & \textbf{0.724} & 0.020 & 0.697--0.766 & $+0.0024$ & 13/15 \\
+G. XGBoost Cox (5 seeds)     & \textbf{0.724} & 0.020 & 0.697--0.767 & $+0.0026$ & 14/15 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1259,10 +1266,11 @@ elastic-net Cox on the same fold.}
 \end{figure}
 
 The tree models bring at most a small gain over the elastic-net (Table~\ref{tab:treecv},
-Figure~\ref{fig:treecv}). Seed-averaged XGBoost improves on it by $+0.0024$ (paired SD
-0.0024), winning 13 of 15 folds: small, but consistent. The random survival forest is
-slightly worse ($-0.003$, 4 of 15). The inner cross-validation consistently preferred small
-models (100 to 300 trees of depth 3 or 4 at a low learning rate), which signals that there
+Figure~\ref{fig:treecv}). Seed-averaged XGBoost improves on it by $+0.0026$ (paired SD
+0.0023), winning 14 of 15 folds: small, but consistent. It also beats the random survival
+forest by $+0.0052$ (14 of 15 folds), which is slightly worse than the elastic-net
+($-0.003$, 4 of 15). The inner cross-validation consistently preferred small models
+(mostly 100 to 300 trees of depth 3 or 4 at a low learning rate), which signals that there
 is little structure left for trees to find beyond what the features already encode. Two
 reasons are likely. The engineered features already contain the main non-linearities and
 interactions, since the IPSS-R score, the cytogenetic categories and TP53 multi-hit status
@@ -1289,9 +1297,10 @@ one to seven years.}
 \paragraph{What the boosted trees use.} Figure~\ref{fig:xgbimp} shows each feature's share
 of the total improvement in the Cox loss (``gain''), summed over the five seed models of
 the final XGBoost. The IPSS-R score (20\%) and the number of mutated genes (11\%)
-dominate, followed by haemoglobin, TP53 VAF and platelets: the same picture as the
-elastic-net coefficients (Figure~\ref{fig:enet}). Gain measures how much a model
-\emph{uses} a feature, not its causal effect, and correlated features share the credit.
+dominate, followed by haemoglobin (8\%), platelets (7\%) and blasts (5\%): the same
+picture as the elastic-net coefficients (Figure~\ref{fig:enet}). Gain measures how much a
+model \emph{uses} a feature, not its causal effect, and correlated features share the
+credit.
 
 \begin{figure}[H]
 \centering
@@ -1314,7 +1323,8 @@ for four patients with elastic-net scores $(1.2, -0.3, 0.4, 2.0)$ and XGBoost sc
 $(0.9, 0.1, 0.8, 0.5)$, the ranks are $(0.75, 0.25, 0.50, 1.00)$ and
 $(1.00, 0.25, 0.75, 0.50)$, and the ensemble score is their average
 $(0.875, 0.25, 0.625, 0.75)$. The two models disagree about patients~1 and~4, and the
-average splits the difference.
+average splits the difference. Converting one model's scores to ranks leaves its own
+C-index unchanged; averaging the ranks of two models produces a new order.
 
 No model was refitted for this step. The out-of-fold predictions of each model, saved for
 all three repetitions, were combined inside each validation fold, so the ensembles are
@@ -1333,9 +1343,9 @@ Model & Mean & SD & Paired vs D & SD of paired & Folds won \\
 \midrule
 D. Elastic-net Cox                     & 0.7218 & 0.021 & --          & --     & --    \\
 F. Random survival forest              & 0.7191 & 0.021 & $-0.0026$   & 0.0043 & 4/15  \\
-G. XGBoost Cox (5 seeds)               & 0.7242 & 0.020 & $+0.0024$   & 0.0024 & 13/15 \\
-E1. Elastic-net $+$ XGBoost            & \textbf{0.7248} & 0.021 & $\mathbf{+0.0030}$ & \textbf{0.0011} & \textbf{15/15} \\
-E2. Elastic-net $+$ XGBoost $+$ forest & 0.7245 & 0.020 & $+0.0027$   & 0.0014 & 15/15 \\
+G. XGBoost Cox (5 seeds)               & 0.7244 & 0.020 & $+0.0026$   & 0.0023 & 14/15 \\
+E1. Elastic-net $+$ XGBoost            & \textbf{0.7250} & 0.021 & $\mathbf{+0.0032}$ & \textbf{0.0012} & \textbf{15/15} \\
+E2. Elastic-net $+$ XGBoost $+$ forest & 0.7245 & 0.021 & $+0.0027$   & 0.0016 & 15/15 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1350,15 +1360,14 @@ tree models and the two ensembles.}
 
 The two-model ensemble E1 is the best and, more importantly, the most \emph{consistent}
 model (Table~\ref{tab:ens}, Figure~\ref{fig:ens}). It beats the elastic-net on all 15
-folds, by $+0.0030$ on average, with a paired standard deviation of only 0.0011, so its mean
-gain is almost three times its fold-to-fold spread. Against XGBoost alone the ensemble
-adds only $+0.0006$ (10 of 15 folds); its value is mainly that it removes XGBoost's two
-losing folds. Adding the forest (E2) does not help. The gains are small because the
-models largely agree: inside the validation folds, the average Spearman correlation of
-the risk scores is 0.962 between the elastic-net and XGBoost, 0.966 between the
-elastic-net and the forest, and 0.963 between XGBoost and the forest (on the test centre:
-0.962, 0.967 and 0.971). Averaging helps only where models disagree, and these models
-disagree on few patients.
+folds, by $+0.0032$ on average, with a paired standard deviation of only 0.0012, so its mean
+gain is more than two and a half times its fold-to-fold spread. Against XGBoost alone the
+ensemble adds only $+0.0006$ on average; its value is mainly that it removes XGBoost's
+losing fold and narrows the spread. Adding the forest (E2) does not help. The gains are
+small because the models largely agree: inside the validation folds, the average Spearman
+correlation of the risk scores is 0.963 between the elastic-net and XGBoost, 0.966 between
+the elastic-net and the forest, and 0.964 between XGBoost and the forest. Averaging helps
+only where models disagree, and these models disagree on few patients.
 
 \subsection{Permutation importance}
 Gain (Figure~\ref{fig:xgbimp}) and coefficients (Figure~\ref{fig:enet}) describe what a
@@ -1387,16 +1396,16 @@ would barely hurt while its partners still hold the information.
 \toprule
 Feature group & Elastic-net & XGBoost \\
 \midrule
-Mutation burden (4 features)        & 0.038 & 0.039 \\
+Mutation burden (4 features)        & 0.038 & 0.041 \\
 IPSS-R score                        & 0.018 & 0.024 \\
 Karyotype (18 features)             & 0.016 & 0.012 \\
-TP53 (4 features)                   & 0.016 & 0.006 \\
-Haemoglobin                         & 0.015 & 0.019 \\
+TP53 (4 features)                   & 0.016 & 0.007 \\
+Haemoglobin                         & 0.015 & 0.018 \\
 Platelets                           & 0.008 & 0.008 \\
 Other gene indicators (44)          & 0.005 & 0.005 \\
-Pathways, FLT3-ITD, MLL-PTD (8)     & 0.003 & 0.002 \\
-Bone-marrow blasts                  & 0.002 & 0.004 \\
-White cells and neutrophils         & 0.000 & 0.005 \\
+Pathways, FLT3-ITD, MLL-PTD (8)     & 0.003 & 0.001 \\
+Bone-marrow blasts                  & 0.002 & 0.003 \\
+White cells and neutrophils         & 0.000 & 0.004 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1407,24 +1416,51 @@ Three findings stand out (Figure~\ref{fig:perm}, Table~\ref{tab:perm}).
         of mutated genes, the maximum VAF and the number of truncating mutations, all
         counted on the shared gene panel. Scrambling them costs about 0.04, more than twice
         any other group. This supports the decision in Stage~3 to count only genes
-        sequenced in both centres: these counts are the model's strongest signal.
+        sequenced in both centres: these counts are the models' strongest signal.
   \item \textbf{The two models use TP53 differently.} The elastic-net loses 0.016 without
-        the TP53 group, XGBoost only 0.006. XGBoost appears to recover much of the TP53
-        information from correlated features (TP53-mutated patients tend to have complex
-        karyotypes and high mutation burden), whereas the linear model relies on the TP53
-        variables directly.
+        the TP53 group, XGBoost only 0.007. The lesion frequencies of Stage~3 are separate
+        prevalences and cannot show whether TP53 and complex karyotypes occur in the
+        \emph{same} patients, so this was checked directly (Table~\ref{tab:tp53co}). They
+        do: 88.5\% of TP53 multi-hit patients have a complex karyotype, against 4.7\% of
+        the others, and 60.3\% of all complex karyotypes are TP53 multi-hit. A tree can
+        build rules such as ``complex karyotype \emph{and} high VAF'' that recover most of
+        the TP53 signal when the TP53 columns are shuffled; a linear model adds effects and
+        relies on the TP53 columns directly. The smaller drop for XGBoost means its TP53
+        group is less \emph{irreplaceable}, not that TP53 matters less. TP53 multi-hit
+        patients do not carry more mutated genes (a median of 2 in both groups), so the
+        overlap runs through the karyotype and a higher VAF, not through mutation burden.
   \item \textbf{Blasts look unimportant only because of overlap.} Bone-marrow blasts were
         the strongest single raw variable in Stage~2, yet shuffling them alone costs
         almost nothing. The IPSS-R score already contains the blast category, so the
         information survives in another group. Permutation importance measures what is
-        \emph{unique} to a group, not how prognostic it is on its own.
+        \emph{unique} to a group, not how prognostic it is on its own. Because the IPSS-R
+        score also contains haemoglobin, platelets, neutrophils and cytogenetics, the drop
+        from shuffling blasts and the IPSS-R score together cannot be found by adding
+        their separate drops; it would need a joint permutation.
 \end{enumerate}
-White cells and neutrophils are used by XGBoost (0.005) but not by the elastic-net, a hint
+White cells and neutrophils are used by XGBoost (0.004) but not by the elastic-net, a hint
 of a non-linear effect that a straight-line Cox term cannot capture.
 
+\begin{table}[H]
+\centering
+\caption{TP53 multi-hit and karyotype in the same patients (training patients with a
+usable karyotype).}
+\label{tab:tp53co}
+\begin{tabular}{lrr}
+\toprule
+ & TP53 multi-hit & Not multi-hit \\
+\midrule
+Patients                   & 209  & 2{,}614 \\
+Complex karyotype (\%)     & 88.5 & 4.7 \\
+Monosomal karyotype (\%)   & 73.7 & 3.0 \\
+Median mutated genes       & 2    & 2 \\
+Median maximum VAF         & 0.51 & 0.41 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Final model choice}
-The final model is chosen by paired cross-validation, before looking at any further
-leaderboard scores:
+The final model was chosen by paired cross-validation, before its public score was known:
 \begin{itemize}
   \item \textbf{Final choice: E1, the rank average of the elastic-net Cox and the
         seed-averaged XGBoost Cox} (cross-validated IPCW C-index $0.725 \pm 0.021$). It has
@@ -1439,11 +1475,170 @@ leaderboard scores:
 \end{itemize}
 
 % ==================================================================
-\section{Next steps}
+\section{External validation on the test centre (Stage 7)}
+\label{sec:external}
 % ==================================================================
-Stage 7 will finish the write-up: a discussion of the limitations (a single external test
-centre, case-mix shift, the gene panel and the karyotype parser), the lessons on validation
-and reproducibility, and the final leaderboard scores of the ensemble.
+The public leaderboard scores each submission on part of the test centre's 1{,}193
+patients, whose outcomes are never seen. It is therefore the one truly external check of
+this work: a different hospital, with a different case mix and gene panel. Submissions
+are limited to two per 24 hours. Before each of the last two uploads, the expected public
+score was written down. The prediction added the model's cross-validated paired gain over
+the elastic-net to the elastic-net's known public score, for example
+$0.7543 + 0.0032 = 0.7575$ for the ensemble.
+
+\begin{table}[H]
+\centering
+\caption{Every submission: cross-validated score, prediction written before uploading, and
+public score.}
+\label{tab:lb}
+\small
+\begin{tabular}{llrrrr}
+\toprule
+Date & Model & CV & Predicted & Public & Public $-$ CV \\
+\midrule
+23 Oct 2026 & Elastic-net Cox             & 0.7218 & --     & 0.7543 & $+0.033$ \\
+23 Oct 2026 & IPSS-M-style Cox            & 0.7159 & --     & 0.7374 & $+0.022$ \\
+24 Oct 2026 & \textbf{Ensemble (final)}   & 0.7250 & 0.7575 & \textbf{0.7552} & $+0.030$ \\
+24 Oct 2026 & XGBoost Cox (5 seeds)       & 0.7244 & 0.7569 & 0.7504 & $+0.026$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig24_leaderboard.png}
+\caption{Cross-validated against public IPCW C-index. Hollow markers are the predictions
+written down before uploading; dotted lines join them to the actual scores.}
+\label{fig:lb}
+\end{figure}
+
+\paragraph{The final model is the best on the test centre.} The ensemble scores 0.7552, the
+highest public score of this work, within 0.0023 of its prediction (Table~\ref{tab:lb},
+Figure~\ref{fig:lb}). Choosing it by cross-validation, without looking at its public score
+first, was confirmed.
+
+\paragraph{XGBoost alone did worse than expected.} Although it beat the elastic-net on 14
+of 15 cross-validation folds, XGBoost scored 0.7504 on the test centre, 0.0039 \emph{below}
+the elastic-net and 0.0065 below its prediction. The test centre behaved like one of its
+rare losing folds, and the ensemble, by averaging it with the elastic-net, still came out on
+top. This is exactly the protection that the small paired spread of the ensemble promised.
+
+One natural explanation was tested and rejected. Tree models can be weak for patients
+with extreme values, and the test centre has many more very high-risk patients. If that
+were the cause, XGBoost should rank high-risk patients worse than the elastic-net in
+cross-validation too. Table~\ref{tab:subg} shows the opposite. Inside the IPSS-R
+very-high-risk subgroup, XGBoost ranks patients better than the elastic-net (0.623 against
+0.608, winning 13 of 15 folds), and elsewhere the two are close. Two explanations remain
+untested. The first is chance: the public score uses only part of one centre, so a
+difference of 0.004 is within its sampling noise. The second is a measurement shift at the
+test centre: trees rely on sharp thresholds (for example, ``haemoglobin below 9.1''), so a
+small systematic difference in how a laboratory measures a value moves many patients
+across a threshold at once, whereas a linear model shifts its scores smoothly.
+
+\begin{table}[H]
+\centering
+\caption{XGBoost against the elastic-net inside subgroups (out-of-fold IPCW C-index,
+mean over folds with enough deaths to score).}
+\label{tab:subg}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Subgroup & Patients & Elastic-net & XGBoost & Difference & XGBoost wins \\
+\midrule
+IPSS-R very high ($>6$)          & 363   & 0.608 & 0.623 & $+0.014$ & 13/15 \\
+IPSS-R high or very high ($>4.5$) & 822   & 0.635 & 0.642 & $+0.007$ & 8/15  \\
+Blasts $\ge 10\%$                & 663   & 0.658 & 0.661 & $+0.004$ & 6/15  \\
+Complex karyotype                & 307   & 0.676 & 0.675 & $-0.000$ & 7/14  \\
+All others (IPSS-R $\le 4.5$)    & 2{,}351 & 0.689 & 0.691 & $+0.001$ & 11/15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Public scores are higher than cross-validation.} All four public scores exceed
+their cross-validated means, by 0.022 to 0.033. The C-index depends on the population as
+well as on the model: a population with a wider range of risk contains more pairs that are
+easy to order. The test centre has many very high-risk patients (a third are IPSS-R very
+high) alongside low-risk ones. Its censoring pattern and the size of the public subset
+also affect the score, so the case mix is a plausible explanation rather than a proven one.
+The offset is not the same for every model, and the order of models changes between
+cross-validation and the test centre. That is why models were chosen by paired
+cross-validation and the leaderboard was used only as a check.
+
+% ==================================================================
+\section{Discussion}
+% ==================================================================
+
+\paragraph{What mattered.} The largest gain in this project came from the features, not from
+the algorithm. Moving from the four benchmark variables to 24 variables chosen from the
+clinical literature (IPSS-R cytogenetics, IPSS-M genes, TP53 multi-hit, MLL-PTD) added
+0.028 in cross-validation and won 14 of 15 folds. Every later step, namely 84 penalised
+features, boosted trees and the ensemble, added at most 0.006 more. Permutation importance
+confirms the point: the strongest signal is the mutation burden, a simple count that only
+became comparable across centres once it was restricted to the shared gene panel.
+
+\paragraph{Validation that matches the test.} The test set is a hospital never seen in
+training, so every model was validated on held-out hospitals and compared fold by fold on
+the same 15 folds. The paired comparison removes the large differences in difficulty
+between folds (the IPSS-R score alone ranges from 0.624 to 0.729 across folds) and leaves
+each model's own advantage. Hyperparameters were always chosen by an inner,
+centre-grouped split, so no validation fold was used twice.
+
+\paragraph{Checking the details.} Three problems were found only by looking closely at
+intermediate results, and each would otherwise have biased the conclusions. The three
+``random'' repetitions of cross-validation were identical, visible as every fold score
+appearing three times. A tuning grid was too narrow, with the smallest value chosen most
+often. And XGBoost gave different results on Windows and Linux. A fourth case was a
+hypothesis rather than a bug: the explanation that trees fail on high-risk patients was
+tested on the cross-validation predictions and rejected.
+
+\paragraph{Clinical sense.} The fitted hazard ratios agree with established knowledge:
+TP53 multi-hit (HR 3.21), MLL partial tandem duplication (2.05) and FLT3 mutation (1.65)
+carry the highest risk, and haemoglobin and platelets are protective. Two findings show why
+adjusted and unadjusted analyses differ. \textit{SF3B1} is protective on its own but
+neutral once blasts, karyotype and blood counts are included, because \textit{SF3B1}
+patients are favoured on most of those. And \textit{NPM1} is harmful in the first months but
+protective later, a violation of proportional hazards that its single Cox coefficient hides.
+
+% ==================================================================
+\section{Limitations}
+% ==================================================================
+\begin{itemize}
+  \item \textbf{One external centre.} The test set comes from a single hospital, and the
+        public score uses only part of it. Conclusions about how the models transfer rest
+        on this one centre; the private leaderboard, updated on 15~June and 15~December,
+        will give a second, larger look at the same centre.
+  \item \textbf{Case-mix shift.} The test centre is much sicker than the training centres.
+        The models were not adapted to it, for example by reweighting training patients to
+        resemble the test centre.
+  \item \textbf{Measurement differences.} The gene panels differ between centres, so 60
+        training genes and 598 training mutations were not used. Monocyte counts were
+        dropped because they are mostly missing at the test centre. Laboratory calibration
+        differences cannot be checked from the data.
+  \item \textbf{The karyotype parser} is a set of hand-written rules tested on 25 cases and
+        cross-checked against a simpler rule. It is not a validated ISCN parser, and rare
+        or badly written karyotypes may be misread.
+  \item \textbf{Censoring.} The metric and the Cox models assume that censoring is unrelated
+        to the patient's prognosis. Follow-up practices that differ between centres could
+        violate this.
+  \item \textbf{Missing information.} There is no information on treatment (for example,
+        stem cell transplantation), age, or disease subtype, all of which affect survival.
+  \item \textbf{The benchmark model} was reconstructed from the challenge description, since
+        the benchmark notebook was not available.
+  \item \textbf{Computation.} XGBoost results differ in the fourth decimal place between
+        operating systems; all reported numbers come from one machine.
+\end{itemize}
+
+% ==================================================================
+\section{Conclusion}
+% ==================================================================
+For adult myeloid leukemia, a carefully engineered set of clinical, cytogenetic and
+molecular features, validated on held-out hospitals, predicts overall survival with an IPCW
+C-index of about 0.72 in cross-validation and 0.755 on an unseen test centre. That is
+about 0.05 better than the published IPSS-R clinical score. A rank-averaged ensemble of an
+elastic-net Cox model and a gradient-boosted Cox model, chosen by paired cross-validation
+before its public score was known, was the best model both in cross-validation and on the
+test centre. The main lesson is that domain knowledge and a validation design that mirrors
+the real test mattered more than the choice of algorithm.
 
 % ==================================================================
 \begin{thebibliography}{99}

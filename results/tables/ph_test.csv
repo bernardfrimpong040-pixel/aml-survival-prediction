@@ -1,4 +1,4 @@
-variable,test_statistic,p
+,test_statistic,p
 mut_NPM1,23.1,1.5e-06
 cyto_missing,17.07,3.6e-05
 log_PLT,16.04,6.2e-05

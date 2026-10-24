@@ -1,4 +1,4 @@
 ,D. Elastic-net Cox,F. Random survival forest,G. XGBoost Cox (5 seeds)
-D. Elastic-net Cox,1.0,0.966,0.963
-F. Random survival forest,0.966,1.0,0.964
-G. XGBoost Cox (5 seeds),0.963,0.964,1.0
+D. Elastic-net Cox,1.0,0.966,0.962
+F. Random survival forest,0.966,1.0,0.963
+G. XGBoost Cox (5 seeds),0.962,0.963,1.0

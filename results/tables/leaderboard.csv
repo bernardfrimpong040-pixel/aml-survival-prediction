@@ -1,0 +1,5 @@
+date,file,model,cv,predicted,public,public_minus_cv,prediction_error
+2026-10-23,stage4_elasticnet_cox.csv,Elastic-net Cox,0.7218,,0.7543,0.0325,
+2026-10-23,stage4_ipssm_cox.csv,IPSS-M-style Cox,0.7159,,0.7374,0.0215,
+2026-10-24,stage6_ensemble_enet_xgb.csv,Ensemble (final),0.725,0.7575,0.7552,0.0302,-0.0023
+2026-10-24,stage5_xgboost_cox.csv,XGBoost Cox (5 seeds),0.7244,0.7569,0.7504,0.026,-0.0065
