@@ -74,6 +74,7 @@ hold out whole hospitals. The public score is the leaderboard result on the unse
 | 6 | Ensemble and interpretation | A rank-averaged ensemble wins 15/15 folds. Grouped permutation importance: mutation burden first. |
 | 7 | External validation and write-up | Predictions recorded before upload. A tested-and-rejected explanation for XGBoost's drop. Discussion and limitations. |
 | 8 | Benchmarks, uncertainty, calibration | IPSS-M benchmark (verified), corrected CIs, time-dependent AUC, Brier score, calibration, Table 1. |
+| 9 | Journal manuscript | A 12-page PLOS ONE manuscript in the official PLOS LaTeX template (Vancouver references, TRIPOD+AI), with figures exported to PLOS's TIFF format. |
 
 **Problems caught by checking the details:** the three "random" CV repeats were identical (a
 `StratifiedGroupKFold` pitfall with only 23 groups); a tuning grid was too narrow; and
@@ -136,12 +137,18 @@ aml-survival-prediction/
 │   ├── ipssm.py                     Stage 8: IPSS-M score from published weights
 │   ├── 12_ipssm_benchmark.py        Stage 8: IPSS-M in CV + submission file
 │   ├── 13_uncertainty_calibration.py Stage 8: corrected CIs, time-dependent AUC, Brier, calibration
-│   └── 14_table1.py                 Stage 8: cohort characteristics (Table 1)
+│   ├── 14_table1.py                 Stage 8: cohort characteristics (Table 1)
+│   └── 15_export_plos_figures.py    Stage 9: figures as PLOS TIFF files (300 dpi, LZW)
 ├── figures/            <- 28 PNG figures (used by the README and the paper)
 ├── results/tables/     <- CSV/TXT/JSON summaries
 ├── submissions/        <- files uploaded to Challenge Data (kept local)
-└── paper/
-    └── main.tex        <- the full LaTeX write-up
+├── paper/
+│   └── main.tex        <- the full LaTeX write-up (technical report)
+└── paper_plos/         <- the journal manuscript (PLOS ONE)
+    ├── manuscript.tex  <- official PLOS template, bibliography pasted in as PLOS requires
+    ├── references.bib  <- the references, to regenerate the bibliography if one is added
+    ├── plos2015.bst    <- PLOS's own BibTeX style (Vancouver)
+    └── figures_upload/ <- Fig1.tif ... S4_Fig.tif, made by script 15 (not on GitHub)
 ```
 
 ## How to run (Windows, VS Code terminal)
@@ -166,6 +173,7 @@ python src/11_final_summary.py
 python src/12_ipssm_benchmark.py
 python src/13_uncertainty_calibration.py
 python src/14_table1.py
+python src/15_export_plos_figures.py
 ```
 
 Approximate times: `06` 3 minutes, `08` 6–10 minutes, `10` 2–4 minutes, `13` about 1 minute;

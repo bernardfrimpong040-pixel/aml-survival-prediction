@@ -1,0 +1,985 @@
+% Template for PLoS
+% Version 3.5 March 2018
+%
+% % % % % % % % % % % % % % % % % % % % % %
+%
+% -- IMPORTANT NOTE
+%
+% This template contains comments intended
+% to minimize problems and delays during our production
+% process. Please follow the template instructions
+% whenever possible.
+%
+% % % % % % % % % % % % % % % % % % % % % % %
+%
+% Once your paper is accepted for publication,
+% PLEASE REMOVE ALL TRACKED CHANGES in this file
+% and leave only the final text of your manuscript.
+% PLOS recommends the use of latexdiff to track changes during review, as this will help to maintain a clean tex file.
+% Visit https://www.ctan.org/pkg/latexdiff?lang=en for info or contact us at latex@plos.org.
+%
+%
+% There are no restrictions on package use within the LaTeX files except that
+% no packages listed in the template may be deleted.
+%
+% Please do not include colors or graphics in the text.
+%
+% The manuscript LaTeX source should be contained within a single file (do not use \input, \externaldocument, or similar commands).
+%
+% % % % % % % % % % % % % % % % % % % % % % %
+%
+% -- FIGURES AND TABLES
+%
+% Please include tables/figure captions directly after the paragraph where they are first cited in the text.
+%
+% DO NOT INCLUDE GRAPHICS IN YOUR MANUSCRIPT
+% - Figures should be uploaded separately from your manuscript file.
+% - Figures generated using LaTeX should be extracted and removed from the PDF before submission.
+% - Figures containing multiple panels/subfigures must be combined into one image file before submission.
+% For figure citations, please use "Fig" instead of "Figure".
+% See http://journals.plos.org/plosone/s/figures for PLOS figure guidelines.
+%
+% Tables should be cell-based and may not contain:
+% - spacing/line breaks within cells to alter layout or alignment
+% - do not nest tabular environments (no tabular environments within tabular environments)
+% - no graphics or colored text (cell background color/shading OK)
+% See http://journals.plos.org/plosone/s/tables for table guidelines.
+%
+% For tables that exceed the width of the text column, use the adjustwidth environment as illustrated in the example table in text below.
+%
+% % % % % % % % % % % % % % % % % % % % % % % %
+%
+% -- EQUATIONS, MATH SYMBOLS, SUBSCRIPTS, AND SUPERSCRIPTS
+%
+% IMPORTANT
+% Below are a few tips to help format your equations and other special characters according to our specifications. For more tips to help reduce the possibility of formatting errors during conversion, please see our LaTeX guidelines at http://journals.plos.org/plosone/s/latex
+%
+% For inline equations, please be sure to include all portions of an equation in the math environment.
+%
+% Do not include text that is not math in the math environment.
+%
+% Please add line breaks to long display equations when possible in order to fit size of the column.
+%
+% For inline equations, please do not include punctuation (commas, etc) within the math environment unless this is part of the equation.
+%
+% When adding superscript or subscripts outside of brackets/braces, please group using {}.
+%
+% Do not use \cal for caligraphic font.  Instead, use \mathcal{}
+%
+% % % % % % % % % % % % % % % % % % % % % % % %
+%
+% Please contact latex@plos.org with any questions.
+%
+% % % % % % % % % % % % % % % % % % % % % % % %
+
+\documentclass[10pt,letterpaper]{article}
+\usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}
+
+% amsmath and amssymb packages, useful for mathematical formulas and symbols
+\usepackage{amsmath,amssymb}
+
+% Use adjustwidth environment to exceed column width (see example table in text)
+\usepackage{changepage}
+
+% textcomp package and marvosym package for additional characters
+\usepackage{textcomp,marvosym}
+
+% cite package, to clean up citations in the main text. Do not remove.
+\usepackage{cite}
+
+% Use nameref to cite supporting information files (see Supporting Information section for more info)
+\usepackage{nameref,hyperref}
+
+% line numbers
+\usepackage[right]{lineno}
+
+% ligatures disabled
+\usepackage{microtype}
+\DisableLigatures[f]{encoding = *, family = * }
+
+% color can be used to apply background shading to table cells only
+\usepackage[table]{xcolor}
+
+% array package and thick rules for tables
+\usepackage{array}
+
+% create "+" rule type for thick vertical lines
+\newcolumntype{+}{!{\vrule width 2pt}}
+
+% create \thickcline for thick horizontal lines of variable length
+\newlength\savedwidth
+\newcommand\thickcline[1]{%
+  \noalign{\global\savedwidth\arrayrulewidth\global\arrayrulewidth 2pt}%
+  \cline{#1}%
+  \noalign{\vskip\arrayrulewidth}%
+  \noalign{\global\arrayrulewidth\savedwidth}%
+}
+
+% \thickhline command for thick horizontal lines that span the table
+\newcommand\thickhline{\noalign{\global\savedwidth\arrayrulewidth\global\arrayrulewidth 2pt}%
+\hline
+\noalign{\global\arrayrulewidth\savedwidth}}
+
+
+% Remove comment for double spacing
+%\usepackage{setspace}
+%\doublespacing
+
+% Text layout
+\raggedright
+\setlength{\parindent}{0.5cm}
+\textwidth 5.25in
+\textheight 8.75in
+
+% Bold the 'Figure #' in the caption and separate it from the title/caption with a period
+% Captions will be left justified
+\usepackage[aboveskip=1pt,labelfont=bf,labelsep=period,justification=raggedright,singlelinecheck=off]{caption}
+\renewcommand{\figurename}{Fig}
+
+% Use the PLoS provided BiBTeX style
+\bibliographystyle{plos2015}
+
+% Remove brackets from numbering in List of References
+\makeatletter
+\renewcommand{\@biblabel}[1]{\quad#1.}
+\makeatother
+
+
+
+% Header and Footer with logo
+\usepackage{lastpage,fancyhdr,graphicx}
+\usepackage{epstopdf}
+%\pagestyle{myheadings}
+\pagestyle{fancy}
+\fancyhf{}
+%\setlength{\headheight}{27.023pt}
+%\lhead{\includegraphics[width=2.0in]{PLOS-submission.eps}}
+\rfoot{\thepage/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrule}{\hrule height 2pt \vspace{2mm}}
+\fancyheadoffset[L]{2.25in}
+\fancyfootoffset[L]{2.25in}
+\lfoot{\today}
+
+%% Include all macros below
+
+% ------------------------------------------------------------------
+% Added for this manuscript (adding packages is allowed by PLOS).
+% float: the [H] placement keeps every table and figure caption
+% directly after the paragraph where it is first cited, as PLOS asks.
+\usepackage{float}
+
+% PLOS wants figures uploaded as separate TIFF files, NOT inside the PDF.
+% Keep \showfigsfalse for the submission PDF.
+% Change to \showfigstrue only to make a private reading copy with the figures
+% (they are read from ../figures/, the folder made by the Python scripts).
+\newif\ifshowfigs
+\showfigsfalse
+\graphicspath{{../figures/}{figures/}}
+\newcommand{\plosfig}[1]{\ifshowfigs\par\includegraphics[width=\linewidth]{#1}\par\fi}
+% ------------------------------------------------------------------
+
+\begin{document}
+\vspace*{0.2in}
+
+% Title must be 250 characters or less.
+\begin{flushleft}
+{\Large
+\textbf\newline{Fitted survival models and the molecular international prognostic scoring system in myeloid neoplasms: a centre-grouped validation study with an unseen external centre} % Please use "sentence case" for title and headings (capitalize only the first word in a title (or heading), the first word in a subtitle (or subheading), and any proper nouns).
+}
+\newline
+% Insert author names, affiliations and corresponding author email (do not include titles, positions, or degrees).
+\\
+Bernard Frimpong\textsuperscript{1*}
+\\
+\bigskip
+\textbf{1} Independent researcher, Akron, Ohio, United States of America
+\\
+\bigskip
+
+% Use the asterisk to denote corresponding authorship and provide email address in note below.
+* bernardfrimpong040@gmail.com
+
+\end{flushleft}
+% Please keep the abstract below 300 words
+\section*{Abstract}
+\textbf{Background:} Machine-learning survival models are increasingly proposed for
+prognosis in myeloid neoplasms, but they are rarely compared with the current molecular
+standard, the Molecular International Prognostic Scoring System (IPSS-M), under a
+validation design that mirrors use at a new hospital.
+
+\textbf{Methods:} I analysed 3,173 patients from 23 centres (1,600 deaths) released in a
+public prediction challenge, and an external centre of 1,193 patients whose outcomes were
+withheld. Predictors were blood counts, a rule-based reading of free-text karyotypes, and
+somatic mutations restricted to the 64 genes sequenced at both the training and the
+external centres. The published revised score (IPSS-R) and the IPSS-M, applied without
+refitting, were compared with Cox models, an elastic-net Cox model, a random survival
+forest, gradient-boosted Cox trees and a rank-averaged ensemble. Discrimination was
+measured by the censoring-weighted concordance index truncated at 7 years, over 15
+centre-grouped cross-validation folds with nested tuning and corrected confidence
+intervals, and on the external centre.
+
+\textbf{Results:} Without fitting, the IPSS-M reached a concordance of 0.720 (95\%
+confidence interval 0.693 to 0.748), against 0.669 for the IPSS-R. The best fitted model,
+an ensemble of the elastic-net and gradient-boosted Cox models chosen before external
+scoring, reached 0.725 (0.700 to 0.750) and beat the elastic-net alone on all 15 folds,
+but its advantage over the IPSS-M was small and uncertain (+0.005, $-$0.005 to +0.014;
+p = 0.29). A recalibrated IPSS-M was slightly better calibrated (integrated Brier score
+0.160 against 0.163). On the external centre, the ensemble scored 0.755 and the IPSS-M
+[IPSS-M PUBLIC SCORE]. Mutation burden on the shared gene panel was the most important
+predictor group.
+
+\textbf{Conclusions:} Carefully engineered fitted models reproduced, but did not clearly
+exceed, the IPSS-M. New prognostic models for myeloid neoplasms should be benchmarked
+against the IPSS-M with centre-level validation before improvement is claimed.
+
+% Please keep the Author Summary between 150 and 200 words
+% Use first person. PLOS ONE authors please skip this step.
+% Author Summary not valid for PLOS ONE submissions.
+
+\linenumbers
+
+% Use "Eq" instead of "Equation" for equation citations.
+\section*{Introduction}
+Myeloid neoplasms, mainly the myelodysplastic syndromes (MDS) and acute myeloid leukemia,
+range from slowly progressing disease to rapidly fatal illness. Estimating a patient's
+prognosis at diagnosis guides treatment: patients at low risk may receive supportive care,
+while patients at high risk may be considered for intensive therapy such as allogeneic
+stem cell transplantation. For MDS, risk has long been estimated with the revised
+International Prognostic Scoring System (IPSS-R), which combines the karyotype, bone-marrow
+blasts and three blood counts~\cite{greenberg2012,schanz2012}. Its molecular successor, the
+IPSS-M, adds somatic mutations in 31 genes and was developed and validated on several
+thousand patients~\cite{bernard2022}.
+
+At the same time, machine-learning survival models such as random survival
+forests~\cite{ishwaran2008} and gradient-boosted trees~\cite{friedman2001,chen2016} are
+often proposed as improvements over regression. Two features of the evidence call for
+caution. First, systematic reviews of clinical prediction models have found no average
+performance benefit of machine learning over regression when both are developed
+carefully~\cite{christodoulou2019}. Second, new models are frequently compared with weak
+baselines and validated on random splits of a single dataset, which mixes patients from
+the same hospital into the training and validation sets; such internal validation
+overstates performance at a new hospital, where case mix and measurement practice
+differ~\cite{austin2016,steyerberg2019}.
+
+A public data challenge organised by Qube Research and Technologies (QRT) and Institut
+Gustave Roussy offers a setting to test both points~\cite{challenge162}. It provides
+clinical, cytogenetic and molecular data on patients from 23 centres, and scores
+predictions on a further centre whose outcomes are never released. A similar crowdsourced
+effort, the DREAM 9 acute myeloid leukemia challenge, also scored survival models by a
+concordance index~\cite{noren2016}.
+
+The aim of this study was to ask whether fitted survival models, from penalised Cox
+regression to boosted trees and their ensemble, improve on the published IPSS-M when
+validated on hospitals they were not trained on. The study is reported following the
+TRIPOD+AI guideline~\cite{collins2024} (\nameref{S1_Table}).
+
+\section*{Materials and methods}
+
+\subsection*{Data source and participants}
+The data are those of challenge 162 on the Challenge Data platform (\'Ecole normale
+sup\'erieure, Paris)~\cite{challenge162}. The training set contains 3,323 patients from 23
+clinical centres, with overall survival in years and a death indicator. The test set
+contains 1,193 patients, all from one further centre (coded KYW) that contributes no
+training patients; their outcomes are withheld, and predictions for them are scored by the
+platform. One hundred and fifty training patients have no recorded outcome and were
+excluded, leaving 3,173 patients and 1,600 deaths. The median blast count of 3\% indicates
+that most patients have MDS. Age, sex, disease subtype and treatment are not provided.
+
+\subsection*{Ethics statement}
+This is a secondary analysis of de-identified data distributed by the challenge organisers
+to registered participants. No new data were collected, and the author had no access to
+identifying information. [TO CONFIRM WITH THE ORGANISERS: the name of the ethics committee
+that approved the original data collection, whether patient consent was written, and
+written permission to publish results derived from the challenge data.]
+
+\subsection*{Outcome}
+The outcome was overall survival, the time from diagnosis to death from any cause, with
+patients alive at last follow-up treated as right-censored. Fifty-three patients had an
+observed time of zero; all were censored and left the risk set immediately.
+
+\subsection*{Predictors}
+Ninety-one candidate predictors were built from each patient's own data; full definitions
+are given in \nameref{S1_Appendix}.
+
+\paragraph*{Clinical variables.} Bone-marrow blasts (\%), haemoglobin (g/dL), and the
+logarithm of one plus white cells, neutrophils, monocytes and platelets (G/L), with a 0/1
+flag for each missing value. Missing values were replaced by the median of the training
+part of each fold, inside the model pipeline.
+
+\paragraph*{Karyotype.} Karyotypes are free text in International System for Human
+Cytogenomic Nomenclature notation, written differently by different centres (lower case
+in training, upper case and the word ``Normal'' at the test centre). A rule-based parser
+normalised the text and extracted the number of abnormalities, 14 recurrent lesions
+(including monosomy 7, deletion 5q, trisomy 8 and 17p loss), complex and monosomal status,
+and the IPSS-R cytogenetic category~\cite{schanz2012}. It was checked on 25 hand-written
+test strings.
+
+\paragraph*{Mutations.} The training file lists 124 mutated genes and the test file 83, of
+which only 64 appear in both; several genes frequent in training never appear at the test
+centre, which suggests a smaller sequencing panel there. To give mutation counts the same
+meaning at every centre, all molecular features used only the 64 shared genes. Features were
+the numbers of mutations and of mutated genes, the maximum variant allele fraction (VAF),
+the number of truncating mutations, TP53 count, maximum VAF and multi-hit status, FLT3
+internal tandem duplication, MLL partial tandem duplication, six pathway counts, and
+indicators for the 45 shared genes mutated in at least 1\% of training patients.
+
+\subsection*{Benchmark scores}
+Both benchmark scores were computed from their published definitions, with no parameter
+estimated from these data.
+
+\paragraph*{IPSS-R.} The sum of points for cytogenetic category, blasts, haemoglobin,
+platelets and neutrophils~\cite{greenberg2012}; a missing component received the median
+points of the training patients.
+
+\paragraph*{IPSS-M.} The IPSS-M is a weighted sum of centred variables,
+\begin{equation}
+\text{IPSS-M} = \frac{1}{\ln 2}\sum_{k} \beta_k \left(x_k - \mu_k\right),
+\label{eq:ipssm}
+\end{equation}
+where $\beta_k$ is the published coefficient of variable $k$ and $\mu_k$ its published
+reference mean~\cite{bernard2022}. The coefficients and means were taken from the authors'
+open-source calculator~\cite{ipssmcalc}. A missing input was set to its reference mean,
+so that it contributes nothing to the sum. The implementation agreed exactly with the
+official calculator on 300 training patients with complete data. Copy-neutral loss of
+heterozygosity is not available in these data, so a single TP53 mutation counted as
+multi-hit only when its VAF exceeded 0.55 or a 17p loss was present.
+
+\subsection*{Models}
+All fitted models used the same predictors and were fitted with the same procedure in every
+fold.
+
+\paragraph*{Cox models.} The Cox proportional hazards model~\cite{cox1972} writes the hazard
+of a patient with predictors $x$ as
+\begin{equation}
+h(t \mid x) = h_0(t)\exp\left(\beta^{\top} x\right),
+\label{eq:cox}
+\end{equation}
+and the linear predictor $\beta^{\top} x$ is the risk score. Three versions were fitted: a
+four-variable model (blasts, haemoglobin, platelets and number of mutations) reconstructed
+from the challenge description; an IPSS-M-style model with 24 variables chosen from the
+literature (the five blood values, the IPSS-R cytogenetic category, a missing-karyotype
+flag, the 16 IPSS-M main-effect genes and the capped count of IPSS-M residual genes), with
+a small ridge penalty of 0.1; and an elastic-net Cox model~\cite{zou2005,simon2011} on 84
+predictors (all except monocytes and the missing flags), which maximises
+\begin{equation}
+\ln L(\beta) - \alpha\left(\rho \sum_{k} |\beta_k| + \frac{1-\rho}{2}\sum_{k} \beta_k^{2}\right),
+\label{eq:enet}
+\end{equation}
+where $L$ is the Cox partial likelihood. The penalty strength $\alpha$ (30 values) and mix
+$\rho \in \{0.1, 0.5, 1\}$ were tuned by nested cross-validation.
+
+\paragraph*{Tree models.} A random survival forest~\cite{ishwaran2008} with 300 trees,
+at least 15 patients per leaf and nine predictors tried per split; and gradient-boosted
+trees with a Cox loss (XGBoost~\cite{chen2016}; learning rate 0.03, 80\% of patients and
+50\% of predictors sampled per tree, minimum child weight 10). The boosted model's depth
+(2, 3 or 4) and number of trees (50 to 600) were tuned by nested cross-validation, and five
+models with different random seeds were averaged. Exact split finding on a single thread
+was used, so that results are reproducible on one machine.
+
+\paragraph*{Ensemble.} Because the metric depends only on the order of the risk scores,
+each model's scores were converted to ranks between 0 and 1 and averaged. The ensemble of
+the elastic-net and boosted Cox models was specified as the final model before any of its
+external scores were known.
+
+\subsection*{Validation}
+\paragraph*{Centre-grouped cross-validation.} All patients of a centre were placed in the
+same fold, so that every validation fold contained only centres unseen in training. The 23
+centres were dealt into five folds of similar size in a random order, and this was repeated
+three times with different orders, giving 15 validation folds. All tuning was nested: the
+penalty and tree settings were chosen by an inner four-fold split of the training part,
+also grouped by centre, and median imputation and standardisation were learned on the
+training part only. Every model was evaluated on the same 15 folds, so that models could be
+compared fold by fold.
+
+\paragraph*{External validation.} Models refitted on all 3,173 training patients were
+applied to the test centre and scored by the challenge platform on its public subset of
+patients. Submissions are limited to two per day. Before each of the last submissions, the
+expected score was written down: the public score of the elastic-net plus the model's
+cross-validated paired difference with the elastic-net.
+
+\subsection*{Performance measures}
+Discrimination was measured by the inverse-probability-of-censoring-weighted concordance
+index~\cite{uno2011}, the challenge metric. For patients $i$ with observed time $T_i$,
+death indicator $\Delta_i$ and risk score $\eta_i$,
+\begin{equation}
+C_{\tau} = \frac{\sum_{i}\sum_{j} \Delta_i\,\hat{G}(T_i)^{-2}\,
+\mathbf{1}(T_i < T_j,\ T_i < \tau)\,\mathbf{1}(\eta_i > \eta_j)}
+{\sum_{i}\sum_{j} \Delta_i\,\hat{G}(T_i)^{-2}\,\mathbf{1}(T_i < T_j,\ T_i < \tau)},
+\label{eq:uno}
+\end{equation}
+where $\hat{G}$ is the Kaplan--Meier estimate~\cite{kaplan1958} of the probability of
+remaining uncensored, estimated on the training part, and $\tau = 7$ years. A pair started
+by a death at a time when few patients remain under follow-up is rare to observe and so
+receives a larger weight. Harrell's concordance index~\cite{harrell1982} was also recorded.
+The cumulative/dynamic area under the receiver operating characteristic curve at 1, 3 and 5
+years~\cite{hung2010} was computed on all 15 folds, with validation follow-up censored at
+6.5 years so that the censoring weights stay defined. Calibration was assessed on the five
+folds of the first repetition by the Brier score at 3 years and integrated from 0.25 to 6
+years~\cite{graf1999}, and by comparing mean predicted with Kaplan--Meier observed 3-year
+survival in ten groups of predicted risk~\cite{vancalster2019}. For this comparison the
+IPSS-M was recalibrated by a one-variable Cox model on its score, fitted on each training
+part, so that its published weights were kept and only the link from score to probability
+was estimated; the elastic-net used its Breslow baseline survival.
+
+\subsection*{Statistical analysis}
+The 15 cross-validation scores are not independent, because the three repetitions reuse the
+same patients and training sets overlap. Confidence intervals and two-sided p-values for
+mean scores and paired differences therefore used the corrected resampled t-test of Nadeau
+and Bengio~\cite{nadeau2003}, which inflates the variance of the mean to
+\begin{equation}
+\widehat{\operatorname{Var}} = \left(\frac{1}{J} + \frac{n_{\text{valid}}}{n_{\text{train}}}\right) s^{2}
+= \left(\frac{1}{15} + 0.257\right) s^{2} = 0.323\, s^{2},
+\label{eq:nb}
+\end{equation}
+where $J = 15$ is the number of folds, $s$ the standard deviation of the fold scores, and
+0.257 the average ratio of validation to training patients, with a t distribution on 14
+degrees of freedom. The proportional hazards assumption of the IPSS-M-style Cox model was
+checked with scaled Schoenfeld residuals~\cite{grambsch1994}. Permutation
+importance~\cite{breiman2001} was measured on held-out folds by shuffling groups of related
+predictors together and recording the fall in concordance.
+
+\subsection*{Software}
+Analyses used Python 3.13 with pandas [VERSION], NumPy [VERSION], scikit-learn
+[VERSION]~\cite{pedregosa2011}, scikit-survival [VERSION]~\cite{polsterl2020},
+lifelines [VERSION]~\cite{lifelines2019} and XGBoost 3.4.1~\cite{chen2016}. All code is
+available at https://github.com/bernardfrimpong040-pixel/aml-survival-prediction
+[ARCHIVE ON ZENODO AND ADD THE DOI BEFORE SUBMISSION].
+
+\subsection*{Use of artificial intelligence tools}
+An AI assistant (Claude, Anthropic) was used to help write and review analysis code and
+to edit the manuscript text. The author designed the study, ran every analysis, checked
+all results and takes full responsibility for the content.
+
+\section*{Results}
+
+\subsection*{Cohort}
+Table~\ref{table1} describes the two cohorts. The median overall survival in training was
+3.15 years. The test centre was clinically sicker than the training centres: it had more
+blasts, lower haemoglobin and platelets, almost three times the share of complex
+karyotypes, and nearly three times the share of TP53 multi-hit patients. One third of its
+patients were IPSS-R very high risk, against 11\% in training. Monocytes were missing for
+74\% of test patients.
+
+\begin{table}[H]
+\begin{adjustwidth}{-2.25in}{0in}
+\centering
+\caption{{\bf Characteristics of the training cohort and the external test centre.}}
+\begin{tabular}{|l|l|l|}
+\hline
+{\bf Characteristic} & {\bf Training (23 centres)} & {\bf Test (one centre)}\\ \thickhline
+Patients & 3,173 & 1,193 \\ \hline
+Sex inferred from karyotype: female / male / unknown, \% & 33.3 / 52.7 / 14.0 & 17.1 / 45.8 / 37.1 \\ \hline
+Deaths, n (\%) & 1,600 (50.4) & withheld \\ \hline
+Median overall survival, years & 3.15 & withheld \\ \hline
+Median follow-up (reverse Kaplan--Meier), years & 3.84 & withheld \\ \hline
+Bone-marrow blasts, \% & 3.0 (1.0--8.0) & 6.0 (2.0--17.0) \\ \hline
+Haemoglobin, g/dL & 9.7 (8.5--11.1) & 8.4 (7.4--10.1) \\ \hline
+Platelets, G/L & 123 (65--230) & 74 (37--143) \\ \hline
+White blood cells, G/L & 4.1 (2.7--6.7) & 2.9 (1.9--5.3) \\ \hline
+Neutrophils, G/L & 2.00 (1.00--3.70) & 1.30 (0.54--2.64) \\ \hline
+Karyotype missing or unusable, n (\%) & 350 (11.0) & 120 (10.1) \\ \hline
+Normal karyotype, n (\%) & 1,643 (51.8) & 410 (34.4) \\ \hline
+Complex karyotype, n (\%) & 307 (9.7) & 336 (28.2) \\ \hline
+IPSS-R cytogenetics poor or very poor, n (\%) & 408 (12.9) & 380 (31.9) \\ \hline
+Mutated genes per patient (shared panel) & 2 (1--4) & 2 (1--3) \\ \hline
+TP53 multi-hit, n (\%) & 210 (6.6) & 213 (17.9) \\ \hline
+SF3B1 mutated, n (\%) & 727 (22.9) & 92 (7.7) \\ \hline
+IPSS-R very high risk, n (\%) & 363 (11.4) & 395 (33.1) \\ \hline
+IPSS-M very high risk, n (\%) & 666 (21.0) & 494 (41.4) \\ \hline
+\end{tabular}
+\begin{flushleft} Values are median (first--third quartile) unless stated. Sex is not
+recorded in the data and was inferred from the sex chromosomes in the karyotype. Outcomes
+of the test centre are withheld by the challenge.
+\end{flushleft}
+\label{table1}
+\end{adjustwidth}
+\end{table}
+
+Both benchmark scores separated survival in the expected order. The six IPSS-M categories
+gave a log-rank chi-squared statistic of 974.2 on 5 degrees of freedom, against 737.4 on 4
+for the five IPSS-R groups, with median survival falling from 9.65 years in the IPSS-M very
+low category to 1.03 years in the very high category (Fig~\ref{fig1}). At the test centre,
+41\% of patients were IPSS-M very high risk, against 21\% in training.
+
+\begin{figure}[H]
+\plosfig{fig25_ipssm.png}
+\caption{{\bf Survival by IPSS-M category and case mix of the two cohorts.}
+Left: Kaplan--Meier overall survival by IPSS-M category in the 3,173 training patients.
+Right: share of patients in each IPSS-M category in training and at the external test
+centre.}
+\label{fig1}
+\end{figure}
+
+\subsection*{Discrimination in centre-grouped cross-validation}
+Table~\ref{table2} gives the concordance of every model over the 15 centre-grouped folds.
+The IPSS-R reached 0.669, and its spread across folds (standard deviation 0.029, range
+0.624 to 0.729), which involves no fitting, shows how much the difficulty of the task
+varies between centres. The IPSS-M, also without fitting, reached 0.720. Of the fitted
+models, the four-variable Cox model reached 0.688 and the IPSS-M-style Cox model 0.716.
+The elastic-net reached 0.722, the random survival forest 0.719, the boosted Cox model
+0.724 and the ensemble 0.725. Adding monocytes and the missing-value flags to the
+elastic-net changed its concordance by $-0.0004$ and lost 11 of 15 folds, so these
+variables were left out.
+
+\begin{table}[H]
+\begin{adjustwidth}{-2.25in}{0in}
+\centering
+\caption{{\bf Concordance over 15 centre-grouped cross-validation folds.}}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+{\bf Model} & {\bf Fitted} & {\bf IPCW C-index (95\% CI)} & {\bf SD over folds} & {\bf Harrell's C}\\ \thickhline
+IPSS-R score & No & 0.669 (0.634--0.703) & 0.029 & 0.692 \\ \hline
+IPSS-M score & No & 0.720 (0.693--0.748) & 0.023 & -- \\ \hline
+Four-variable Cox & Yes & 0.688 (0.653--0.723) & 0.029 & 0.703 \\ \hline
+IPSS-M-style Cox (24 variables) & Yes & 0.716 (0.688--0.743) & 0.023 & 0.736 \\ \hline
+Elastic-net Cox (84 predictors) & Yes & 0.722 (0.696--0.747) & 0.021 & 0.740 \\ \hline
+Random survival forest & Yes & 0.719 & 0.021 & -- \\ \hline
+Boosted Cox trees (XGBoost) & Yes & 0.724 (0.700--0.749) & 0.020 & -- \\ \hline
+Ensemble: elastic-net and boosted Cox & Yes & 0.725 (0.700--0.750) & 0.021 & -- \\ \hline
+\end{tabular}
+\begin{flushleft} IPCW C-index, concordance index weighted by the inverse probability of
+censoring, truncated at 7 years. Confidence intervals use the corrected resampled t-test
+(Eq~\ref{eq:nb}). SD, standard deviation. Dashes: not computed.
+\end{flushleft}
+\label{table2}
+\end{adjustwidth}
+\end{table}
+
+Because all models were scored on the same folds, paired differences remove most of this
+between-centre variation (Table~\ref{table3}, Fig~\ref{fig2}). The gains from clinical
+knowledge were large and certain: the IPSS-M beat the IPSS-R by 0.052 (95\% CI 0.037 to
+0.066), and the 24 literature-chosen variables beat the four-variable model by 0.028 (0.010
+to 0.045), winning 14 of 15 folds. The gains from more flexible algorithms were small. The
+ensemble beat the elastic-net by 0.003 (0.002 to 0.005) on all 15 folds; the boosted model
+alone beat it by 0.003 ($-$0.000 to 0.005) on 14 of 15. No fitted model was distinguishable
+from the IPSS-M: the ensemble was ahead by 0.005 ($-$0.005 to 0.014; p = 0.29), winning 11
+of 15 folds, and the elastic-net by 0.002 ($-$0.007 to 0.011; p = 0.71).
+
+\begin{table}[H]
+\begin{adjustwidth}{-2.25in}{0in}
+\centering
+\caption{{\bf Paired differences in concordance over the same 15 folds.}}
+\begin{tabular}{|l|c|c|c|}
+\hline
+{\bf Comparison} & {\bf Mean difference (95\% CI)} & {\bf p} & {\bf Folds won}\\ \thickhline
+IPSS-M minus IPSS-R & 0.052 (0.037 to 0.066) & $<$0.001 & 15/15 \\ \hline
+IPSS-M-style Cox minus four-variable Cox & 0.028 (0.010 to 0.045) & 0.004 & 14/15 \\ \hline
+Elastic-net minus IPSS-R & 0.053 (0.033 to 0.073) & $<$0.001 & 15/15 \\ \hline
+Elastic-net minus IPSS-M & 0.002 ($-$0.007 to 0.011) & 0.71 & 10/15 \\ \hline
+Boosted Cox minus elastic-net & 0.003 ($-$0.000 to 0.005) & 0.07 & 14/15 \\ \hline
+Ensemble minus elastic-net & 0.003 (0.002 to 0.005) & $<$0.001 & 15/15 \\ \hline
+Ensemble minus IPSS-M & 0.005 ($-$0.005 to 0.014) & 0.29 & 11/15 \\ \hline
+\end{tabular}
+\begin{flushleft} Positive values favour the first model. Confidence intervals and
+two-sided p-values from the corrected resampled t-test with 14 degrees of freedom.
+\end{flushleft}
+\label{table3}
+\end{adjustwidth}
+\end{table}
+
+\begin{figure}[H]
+\plosfig{fig26_paired_ci.png}
+\caption{{\bf Paired differences in concordance with corrected 95\% confidence intervals.}
+Each row is the mean, over the same 15 centre-grouped folds, of the difference in the
+censoring-weighted concordance index between two models.}
+\label{fig2}
+\end{figure}
+
+The time-dependent area under the curve told the same story (\nameref{S4_Fig}). At 1, 3
+and 5 years, the fitted models and the IPSS-M were within 0.006 of each other (for the
+ensemble 0.779, 0.805 and 0.806; for the IPSS-M 0.777, 0.803 and 0.803), and 0.05 to 0.08
+above the IPSS-R.
+
+\subsection*{What the models use}
+In the IPSS-M-style Cox model refitted on all training patients, TP53 multi-hit status had
+the largest hazard ratio (3.21, 95\% CI 2.59 to 3.98), followed by MLL partial tandem
+duplication (2.05) and FLT3 mutation (1.65), while higher haemoglobin (0.77 per standard
+deviation) and platelets (0.83) were protective (Fig~\ref{fig3}). SF3B1 mutation, strongly
+protective in a univariable comparison, was neutral after adjustment (1.02, 0.88 to 1.18).
+Four of 24 variables departed from proportional hazards at p $<$ 0.05; the largest
+departure was NPM1 mutation, harmful in the first months and protective after about four
+years (\nameref{S3_Fig}).
+
+\begin{figure}[H]
+\plosfig{fig15_hazard_ratios.png}
+\caption{{\bf Hazard ratios of the IPSS-M-style Cox model.}
+Hazard ratios with 95\% confidence intervals, refitted on all 3,173 training patients.
+Blood values are per standard deviation; the cytogenetic category and the residual-gene
+count are per step; genes are mutated against not mutated.}
+\label{fig3}
+\end{figure}
+
+Permutation importance on held-out centres identified mutation burden (the numbers of
+mutations and mutated genes, the maximum VAF and the number of truncating mutations, all
+counted on the shared panel) as the most important predictor group for both the
+elastic-net and the boosted model, with a fall in concordance of about 0.04 when shuffled,
+more than twice that of any other group (Fig~\ref{fig4}). The boosted model depended less
+on the TP53 columns than the elastic-net (0.007 against 0.016), consistent with the strong
+overlap between TP53 multi-hit status and complex karyotype: 88.5\% of TP53 multi-hit
+patients had a complex karyotype, against 4.7\% of the others.
+
+\begin{figure}[H]
+\plosfig{fig23_permutation_importance.png}
+\caption{{\bf Permutation importance on held-out centres.}
+Fall in the censoring-weighted concordance index when the predictors of one group are
+shuffled together in the validation fold (mean and standard deviation over the five
+folds of the first repetition), for the elastic-net and the boosted Cox model.}
+\label{fig4}
+\end{figure}
+
+\subsection*{Calibration}
+Both the recalibrated IPSS-M and the elastic-net reduced the Brier score by about a quarter
+compared with a Kaplan--Meier curve that ignores all predictors (Table~\ref{table4}). The
+recalibrated IPSS-M was slightly better calibrated. The elastic-net's predictions were
+compressed towards the middle: its predicted 3-year survival spanned 0.08 to 0.74 across
+the ten risk groups, while observed survival spanned 0.08 to 0.85, so patients at low risk
+did better than predicted (Fig~\ref{fig5}). Such compression is the expected effect of
+penalisation and could be corrected by recalibrating the linear predictor.
+
+\begin{table}[H]
+\begin{adjustwidth}{-2.25in}{0in}
+\centering
+\caption{{\bf Brier scores and calibration (five folds of the first repetition).}}
+\begin{tabular}{|l|c|c|c|}
+\hline
+{\bf Model} & {\bf Integrated Brier score} & {\bf Brier score at 3 years} & {\bf Calibration error at 3 years}\\ \thickhline
+Kaplan--Meier, no predictors & 0.211 & 0.243 & -- \\ \hline
+IPSS-M, recalibrated & 0.160 & 0.178 & 0.050 \\ \hline
+Elastic-net Cox & 0.163 & 0.181 & 0.065 \\ \hline
+\end{tabular}
+\begin{flushleft} Lower is better. The integrated Brier score averages the Brier score from
+0.25 to 6 years. Calibration error is the mean absolute difference between predicted and
+Kaplan--Meier observed 3-year survival over ten groups of predicted risk.
+\end{flushleft}
+\label{table4}
+\end{adjustwidth}
+\end{table}
+
+\begin{figure}[H]
+\plosfig{fig28_calibration.png}
+\caption{{\bf Calibration at 3 years.}
+Mean predicted against Kaplan--Meier observed 3-year survival in ten groups of
+out-of-fold predicted risk, for the recalibrated IPSS-M and the elastic-net Cox model.
+The diagonal marks perfect calibration.}
+\label{fig5}
+\end{figure}
+
+\subsection*{External validation}
+Table~\ref{table5} lists every submission to the test centre. The ensemble, specified as
+the final model before submission, scored 0.7552, the highest of all submissions and within
+0.0023 of its written prediction. The boosted model alone scored 0.7504, below the
+elastic-net (0.7543) although it had beaten the elastic-net on 14 of 15 folds; a
+subgroup analysis did not support the explanation that trees rank high-risk patients
+poorly, since in the IPSS-R very-high-risk subgroup the boosted model ranked better than
+the elastic-net in cross-validation (0.623 against 0.608, 11 of 15 folds). The IPSS-M scored
+[IPSS-M PUBLIC SCORE]. All public scores were 0.02 to 0.03 higher than their
+cross-validated means (Fig~\ref{fig6}), plausibly because the wider spread of risk at the
+test centre makes patients easier to rank.
+
+\begin{table}[H]
+\begin{adjustwidth}{-2.25in}{0in}
+\centering
+\caption{{\bf External validation on the unseen test centre.}}
+\begin{tabular}{|l|c|c|c|}
+\hline
+{\bf Model} & {\bf Cross-validated C} & {\bf Written prediction} & {\bf Public score}\\ \thickhline
+Elastic-net Cox & 0.7218 & -- & 0.7543 \\ \hline
+IPSS-M-style Cox & 0.7159 & -- & 0.7374 \\ \hline
+Ensemble (final model) & 0.7250 & 0.7575 & 0.7552 \\ \hline
+Boosted Cox trees & 0.7244 & 0.7569 & 0.7504 \\ \hline
+IPSS-M score (not fitted) & 0.7202 & [PREDICTION] & [SCORE] \\ \hline
+\end{tabular}
+\begin{flushleft} Public score: censoring-weighted concordance index computed by the
+challenge platform on the public subset of the test centre. Written prediction: the
+elastic-net's public score plus the model's cross-validated paired difference with the
+elastic-net, written down before submission.
+\end{flushleft}
+\label{table5}
+\end{adjustwidth}
+\end{table}
+
+\begin{figure}[H]
+\plosfig{fig24_leaderboard.png}
+\caption{{\bf Cross-validated against external concordance.}
+Each point is one submitted model. Hollow markers show the predictions written down before
+submission; dotted lines join them to the public scores.}
+\label{fig6}
+\end{figure}
+
+\section*{Discussion}
+In 3,173 patients from 23 centres, with validation on held-out centres and on an unseen
+external centre, carefully built survival models reproduced the discrimination of the
+published IPSS-M but did not clearly exceed it. The IPSS-M, used with its published
+weights and no fitting, reached a cross-validated concordance of 0.720; the best fitted
+model, an ensemble of an elastic-net and a boosted Cox model, reached 0.725, an advantage
+whose confidence interval includes zero. The recalibrated IPSS-M was also slightly better
+calibrated. [ADD ONE SENTENCE ON THE IPSS-M EXTERNAL SCORE ONCE KNOWN.]
+
+Most of the predictive performance came from clinical knowledge rather than from the
+algorithm. Moving from four generic variables to 24 variables chosen from the IPSS-R and
+IPSS-M literature added 0.028; every later step, namely penalisation of 84 predictors,
+boosted trees and the ensemble, added at most 0.006 more. This agrees with systematic
+evidence that flexible algorithms rarely improve on well-specified regression in clinical
+prediction~\cite{christodoulou2019}. The most important predictors, mutation burden,
+cytogenetics and TP53, are those already built into the IPSS-M. The modest gain of the
+boosted model, and the small trees preferred by its tuning, suggest that little structure
+remains for trees to find once expert-designed variables such as the cytogenetic category
+and TP53 multi-hit status are present.
+
+Two practical points arose about validation across centres. First, harmonisation mattered:
+the test centre sequenced a smaller gene panel and recorded karyotypes differently, and
+mutation counts were the strongest signal only once restricted to genes sequenced at every
+centre. Without this step a mutation count would have meant different things in training
+and at the test centre. Second, between-centre variation was large compared with the
+differences between models. The unfitted IPSS-R ranged from 0.624 to 0.729 across folds,
+so comparisons of mean scores would have been uninformative; paired comparisons on the same
+folds, with confidence intervals corrected for the overlap between folds~\cite{nadeau2003},
+were needed to separate a consistent 0.003 gain from noise. The external centre also showed
+that a model winning 14 of 15 internal folds can still lose at a new hospital, which is
+the protection that averaging two different models provided here.
+
+This study has limitations. The training centres very probably overlap with the cohort on
+which the IPSS-M was developed~\cite{bernard2022}; if so, the IPSS-M's cross-validated
+scores are partly in-sample and optimistic, and the external centre is its fairest test.
+External validation rests on one centre, scored on a public subset of its patients. The
+data contain no age, treatment or disease subtype, all of which affect survival. Monocytes
+and 60 genes could not be used because of differences between centres, and laboratory
+calibration differences cannot be checked. The karyotype parser is a set of hand-written
+rules rather than a validated nomenclature parser. The four-variable benchmark was
+reconstructed from the challenge description. Finally, the boosted model's results differ
+in the fourth decimal place between operating systems, although each machine reproduces
+its own results exactly.
+
+\section*{Conclusion}
+For myeloid neoplasms, fitted survival models built on clinical, cytogenetic and molecular
+data, and validated on hospitals they had not seen, matched but did not measurably improve
+on the published IPSS-M. Claims that a new model improves prognosis should be tested
+against the IPSS-M, with validation grouped by centre and paired comparisons, before they
+are accepted.
+
+\section*{Supporting information}
+
+% Include only the SI item label in the paragraph heading. Use the \nameref{label} command to cite SI items in the text.
+\paragraph*{S1 Table.}
+\label{S1_Table}
+{\bf TRIPOD+AI checklist.} Location in the manuscript of each item of the TRIPOD+AI
+reporting guideline.
+
+\paragraph*{S1 Appendix.}
+\label{S1_Appendix}
+{\bf Predictor definitions.} Karyotype parsing rules, IPSS-R points and cytogenetic
+categories, IPSS-M coefficients and reference means, the shared gene panel and the pathway
+gene lists.
+
+\paragraph*{S1 Fig.}
+\label{S1_Fig}
+{\bf Cox models on each validation fold.} Concordance of each Cox model on each of the 15
+centre-grouped folds, and the paired difference with the IPSS-R score.
+
+\paragraph*{S2 Fig.}
+\label{S2_Fig}
+{\bf Tree models on each validation fold.} Concordance of the random survival forest and
+the boosted Cox model on each fold, and the paired difference with the elastic-net.
+
+\paragraph*{S3 Fig.}
+\label{S3_Fig}
+{\bf Time-varying effects.} Scaled Schoenfeld residuals plus the estimated coefficient for
+NPM1 mutation and platelets, against the constant effect assumed by the Cox model.
+
+\paragraph*{S4 Fig.}
+\label{S4_Fig}
+{\bf Time-dependent area under the curve.} Cumulative/dynamic area under the curve at 1, 3
+and 5 years for each model (mean of 15 folds).
+
+\paragraph*{S1 File.}
+\label{S1_File}
+{\bf Full technical report.} Every analysis stage, with all intermediate tables and
+figures.
+
+\section*{Acknowledgments}
+I thank Qube Research and Technologies and Institut Gustave Roussy for organising the
+challenge and making the data available, and the Challenge Data team at \'Ecole normale
+sup\'erieure for hosting it.
+
+\nolinenumbers
+
+% Either type in your references using
+% \begin{thebibliography}{}
+% \bibitem{}
+% Text
+% \end{thebibliography}
+%
+% or
+%
+% Compile your BiBTeX database using our plos2015.bst
+% style file and paste the contents of your .bbl file
+% here. See http://journals.plos.org/plosone/s/latex for
+% step-by-step instructions.
+%
+% Bibliography generated with plos2015.bst from references.bib and pasted here, as PLOS requires.
+\begin{thebibliography}{10}
+
+\bibitem{greenberg2012}
+Greenberg PL, Tuechler H, Schanz J, Sanz G, Garcia-Manero G, Sol{\'e} F, et~al.
+\newblock Revised international prognostic scoring system for myelodysplastic
+  syndromes.
+\newblock Blood. 2012;120(12):2454--2465.
+
+\bibitem{schanz2012}
+Schanz J, Tuechler H, Sol{\'e} F, Mallo M, Lu{\~n}o E, Cervera J, et~al.
+\newblock New comprehensive cytogenetic scoring system for primary
+  myelodysplastic syndromes ({MDS}) and oligoblastic acute myeloid leukemia
+  after {MDS} derived from an international database merge.
+\newblock J Clin Oncol. 2012;30(8):820--829.
+
+\bibitem{bernard2022}
+Bernard E, Tuechler H, Greenberg PL, Hasserjian RP, Arango~Ossa JE, Nannya Y,
+  et~al.
+\newblock Molecular international prognostic scoring system for myelodysplastic
+  syndromes.
+\newblock NEJM Evid. 2022;1(7):EVIDoa2200008.
+
+\bibitem{ishwaran2008}
+Ishwaran H, Kogalur UB, Blackstone EH, Lauer MS.
+\newblock Random survival forests.
+\newblock Ann Appl Stat. 2008;2(3):841--860.
+
+\bibitem{friedman2001}
+Friedman JH.
+\newblock Greedy function approximation: a gradient boosting machine.
+\newblock Ann Stat. 2001;29(5):1189--1232.
+
+\bibitem{chen2016}
+Chen T, Guestrin C.
+\newblock {XGBoost}: a scalable tree boosting system.
+\newblock In: Proceedings of the 22nd ACM SIGKDD International Conference on
+  Knowledge Discovery and Data Mining. New York: ACM; 2016. p. 785--794.
+
+\bibitem{christodoulou2019}
+Christodoulou E, Ma J, Collins GS, Steyerberg EW, Verbakel JY, Van~Calster B.
+\newblock A systematic review shows no performance benefit of machine learning
+  over logistic regression for clinical prediction models.
+\newblock J Clin Epidemiol. 2019;110:12--22.
+
+\bibitem{austin2016}
+Austin PC, van Klaveren D, Vergouwe Y, Nieboer D, Lee DS, Steyerberg EW.
+\newblock Geographic and temporal validity of prediction models: different
+  approaches were useful to examine model performance.
+\newblock J Clin Epidemiol. 2016;79:76--85.
+
+\bibitem{steyerberg2019}
+Steyerberg EW.
+\newblock Clinical prediction models: a practical approach to development,
+  validation, and updating.
+\newblock 2nd ed. Cham: Springer; 2019.
+
+\bibitem{challenge162}
+{Qube Research and Technologies}, {Institut Gustave Roussy}. Overall survival
+  prediction for patients diagnosed with myeloid leukemia [data challenge 162];
+  2025.
+\newblock [cited 2026 Oct 24]. Available from:
+  https://challengedata.ens.fr/challenges/162.
+
+\bibitem{noren2016}
+Noren DP, Long BL, Norel R, Rrhissorrakrai K, Hess K, Hu CW, et~al.
+\newblock A crowdsourcing approach to developing and assessing prediction
+  algorithms for {AML} prognosis.
+\newblock PLoS Comput Biol. 2016;12(6):e1004890.
+
+\bibitem{collins2024}
+Collins GS, Moons KGM, Dhiman P, Riley RD, Beam AL, Van~Calster B, et~al.
+\newblock {TRIPOD+AI} statement: updated guidance for reporting clinical
+  prediction models that use regression or machine learning methods.
+\newblock BMJ. 2024;385:e078378.
+
+\bibitem{ipssmcalc}
+{Papaemmanuil Lab}. ipssm: {IPSS-M} risk calculator, version 1.0.4 [software];
+  2023.
+\newblock [cited 2026 Oct 24]. Available from:
+  https://www.npmjs.com/package/ipssm.
+
+\bibitem{cox1972}
+Cox DR.
+\newblock Regression models and life-tables.
+\newblock J R Stat Soc Series B Stat Methodol. 1972;34(2):187--220.
+
+\bibitem{zou2005}
+Zou H, Hastie T.
+\newblock Regularization and variable selection via the elastic net.
+\newblock J R Stat Soc Series B Stat Methodol. 2005;67(2):301--320.
+
+\bibitem{simon2011}
+Simon N, Friedman J, Hastie T, Tibshirani R.
+\newblock Regularization paths for {Cox's} proportional hazards model via
+  coordinate descent.
+\newblock J Stat Softw. 2011;39(5):1--13.
+
+\bibitem{uno2011}
+Uno H, Cai T, Pencina MJ, D'Agostino RB, Wei LJ.
+\newblock On the {C}-statistics for evaluating overall adequacy of risk
+  prediction procedures with censored survival data.
+\newblock Stat Med. 2011;30(10):1105--1117.
+
+\bibitem{kaplan1958}
+Kaplan EL, Meier P.
+\newblock Nonparametric estimation from incomplete observations.
+\newblock J Am Stat Assoc. 1958;53(282):457--481.
+
+\bibitem{harrell1982}
+Harrell FE, Califf RM, Pryor DB, Lee KL, Rosati RA.
+\newblock Evaluating the yield of medical tests.
+\newblock JAMA. 1982;247(18):2543--2546.
+
+\bibitem{hung2010}
+Hung H, Chiang CT.
+\newblock Estimation methods for time-dependent {AUC} models with survival
+  data.
+\newblock Can J Stat. 2010;38(1):8--26.
+
+\bibitem{graf1999}
+Graf E, Schmoor C, Sauerbrei W, Schumacher M.
+\newblock Assessment and comparison of prognostic classification schemes for
+  survival data.
+\newblock Stat Med. 1999;18(17--18):2529--2545.
+
+\bibitem{vancalster2019}
+Van~Calster B, McLernon DJ, van Smeden M, Wynants L, Steyerberg EW.
+\newblock Calibration: the {Achilles} heel of predictive analytics.
+\newblock BMC Med. 2019;17:230.
+
+\bibitem{nadeau2003}
+Nadeau C, Bengio Y.
+\newblock Inference for the generalization error.
+\newblock Mach Learn. 2003;52(3):239--281.
+
+\bibitem{grambsch1994}
+Grambsch PM, Therneau TM.
+\newblock Proportional hazards tests and diagnostics based on weighted
+  residuals.
+\newblock Biometrika. 1994;81(3):515--526.
+
+\bibitem{breiman2001}
+Breiman L.
+\newblock Random forests.
+\newblock Mach Learn. 2001;45(1):5--32.
+
+\bibitem{pedregosa2011}
+Pedregosa F, Varoquaux G, Gramfort A, Michel V, Thirion B, Grisel O, et~al.
+\newblock Scikit-learn: machine learning in {Python}.
+\newblock J Mach Learn Res. 2011;12:2825--2830.
+
+\bibitem{polsterl2020}
+P{\"o}lsterl S.
+\newblock scikit-survival: a library for time-to-event analysis built on top of
+  scikit-learn.
+\newblock J Mach Learn Res. 2020;21(212):1--6.
+
+\bibitem{lifelines2019}
+Davidson-Pilon C.
+\newblock lifelines: survival analysis in {Python}.
+\newblock J Open Source Softw. 2019;4(40):1317.
+
+\end{thebibliography}
+
+\end{document}

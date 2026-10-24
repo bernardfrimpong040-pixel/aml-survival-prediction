@@ -26,3 +26,12 @@ paper/*.fdb_latexmk
 .vscode/
 .DS_Store
 Thumbs.db
+
+# PLOS figure exports (made by src/15_export_plos_figures.py)
+paper_plos/figures_upload/
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
