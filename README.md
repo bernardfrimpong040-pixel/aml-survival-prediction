@@ -21,7 +21,7 @@ hold out whole hospitals. The public score is the leaderboard result on the unse
 | Model | Cross-validation | vs elastic-net, same folds | Public score |
 |---|---|---|---|
 | IPSS-R clinical score (no fitting) | 0.669 ± 0.029 | −0.053 | — |
-| **IPSS-M clinical score (no fitting, published weights)** | **0.720 ± 0.023** | −0.002 | *pending* |
+| **IPSS-M clinical score (no fitting, published weights)** | **0.720 ± 0.023** | −0.002 | **0.7255** |
 | Benchmark-style Cox (4 variables) | 0.688 ± 0.029 | −0.034 | — |
 | IPSS-M-style Cox (24 variables) | 0.716 ± 0.023 | −0.006 | 0.7374 |
 | Elastic-net Cox (84 features) | 0.722 ± 0.021 | — | 0.7543 |
@@ -41,10 +41,18 @@ hold out whole hospitals. The public score is the leaderboard result on the unse
    scored *below* the elastic-net at the test hospital. Averaging the two still came out on top.
 4. **Mutation burden is the strongest signal.** It's the number of mutated genes and their
    VAF, counted only on genes sequenced in *both* hospitals.
-5. **Honest benchmark: the published IPSS-M is as good.** With no fitting at all, the IPSS-M
-   reaches 0.720. The final ensemble is ahead by only +0.005 (corrected 95% CI −0.005 to
-   +0.014), and the recalibrated IPSS-M is slightly better calibrated. This work reproduces
-   the clinical standard from the challenge data; it does not beat it.
+5. **Honest benchmark: the published IPSS-M is as good in cross-validation.** With no
+   fitting at all, the IPSS-M reaches 0.720. The final ensemble is ahead by only +0.005
+   (corrected 95% CI −0.005 to +0.014), and the recalibrated IPSS-M is slightly better
+   calibrated.
+6. **At the unseen hospital, the ensemble beat the IPSS-M by 0.030** (0.7552 vs 0.7255),
+   six times the cross-validated gap. I tested two explanations on the training data and
+   rejected both: the test hospital's sicker case mix (resampling folds to match it keeps
+   the gap at +0.005) and its extra missing blood counts (both models lose the same).
+   Across single training hospitals the gap ranges from −0.014 to +0.017, so one hospital
+   is promising evidence, not proof.
+
+![IPSS-M gap by hospital](figures/fig29_ipssm_gap_by_centre.png)
 
 ## Skills demonstrated
 
@@ -74,7 +82,7 @@ hold out whole hospitals. The public score is the leaderboard result on the unse
 | 6 | Ensemble and interpretation | A rank-averaged ensemble wins 15/15 folds. Grouped permutation importance: mutation burden first. |
 | 7 | External validation and write-up | Predictions recorded before upload. A tested-and-rejected explanation for XGBoost's drop. Discussion and limitations. |
 | 8 | Benchmarks, uncertainty, calibration | IPSS-M benchmark (verified), corrected CIs, time-dependent AUC, Brier score, calibration, Table 1. |
-| 9 | Journal manuscript | A 12-page PLOS ONE manuscript in the official PLOS LaTeX template (Vancouver references, TRIPOD+AI), with figures exported to PLOS's TIFF format. |
+| 9 | Journal manuscript | IPSS-M scored on the test hospital and its gap explained (script 16); a 13-page PLOS ONE manuscript in the official PLOS LaTeX template (Vancouver references, TRIPOD+AI), with figures exported to PLOS's TIFF format. |
 
 **Problems caught by checking the details:** the three "random" CV repeats were identical (a
 `StratifiedGroupKFold` pitfall with only 23 groups); a tuning grid was too narrow; and
@@ -138,8 +146,9 @@ aml-survival-prediction/
 │   ├── 12_ipssm_benchmark.py        Stage 8: IPSS-M in CV + submission file
 │   ├── 13_uncertainty_calibration.py Stage 8: corrected CIs, time-dependent AUC, Brier, calibration
 │   ├── 14_table1.py                 Stage 8: cohort characteristics (Table 1)
-│   └── 15_export_plos_figures.py    Stage 9: figures as PLOS TIFF files (300 dpi, LZW)
-├── figures/            <- 28 PNG figures (used by the README and the paper)
+│   ├── 15_export_plos_figures.py    Stage 9: figures as PLOS TIFF files (300 dpi, LZW)
+│   └── 16_ipssm_external_check.py   Stage 9: why the IPSS-M fell behind at the test hospital
+├── figures/            <- 29 PNG figures (used by the README and the paper)
 ├── results/tables/     <- CSV/TXT/JSON summaries
 ├── submissions/        <- files uploaded to Challenge Data (kept local)
 ├── paper/
@@ -173,11 +182,12 @@ python src/11_final_summary.py
 python src/12_ipssm_benchmark.py
 python src/13_uncertainty_calibration.py
 python src/14_table1.py
+python src/16_ipssm_external_check.py
 python src/15_export_plos_figures.py
 ```
 
 Approximate times: `06` 3 minutes, `08` 6–10 minutes, `10` 2–4 minutes, `13` about 1 minute;
-the others take seconds.
+the others take seconds. `16` runs before `15` because `15` exports the figure that `16` makes.
 
 **Why `--no-deps` for scikit-survival?** It lists `ecos` as a dependency, but `ecos` has no
 ready-made Windows package for Python 3.13 and would need Microsoft C++ Build Tools to
@@ -195,13 +205,14 @@ the model's paired cross-validation gain.
 | 23 Oct 2026 | `stage4_ipssm_cox.csv` | IPSS-M-style Cox | 0.7159 | — | 0.7374 |
 | 24 Oct 2026 | `stage6_ensemble_enet_xgb.csv` | **Ensemble (final)** | 0.7250 | 0.7575 | **0.7552** |
 | 24 Oct 2026 | `stage5_xgboost_cox.csv` | XGBoost Cox (5 seeds) | 0.7244 | 0.7569 | 0.7504 |
-| — | `stage8_ipssm_score.csv` | IPSS-M score (no fitting) | 0.7202 | *to record* | *pending* |
+| 25 Oct 2026 | `stage8_ipssm_score.csv` | IPSS-M score (no fitting) | 0.7202 | — | 0.7255 |
 
 ## Limitations
 
 The training data very probably overlap with the cohort used to build the IPSS-M, so its
 scores here may be optimistic. There is only one external hospital, and only part of it is
-scored publicly. The test
+scored publicly, so the ensemble's 0.030 lead over the IPSS-M there has no confidence
+interval. The test
 hospital is much sicker than training, and the models were not adapted to it. Gene panels
 differ between hospitals (60 training genes unused). The karyotype parser is rule-based. The
 metric assumes censoring is unrelated to prognosis. There is no treatment or age

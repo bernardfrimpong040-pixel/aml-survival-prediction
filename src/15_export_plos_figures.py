@@ -8,7 +8,7 @@ figures). PLOS asks for:
   - 300 to 600 dots per inch (dpi)
   - width between 2.63 and 7.5 inches, height at most 8.75 inches
 
-This script reads YOUR figures from figures/ (made by scripts 07 to 13), converts
+This script reads YOUR figures from figures/ (made by scripts 07 to 13 and 16), converts
 each one to that format and saves it in paper_plos/figures_upload/.
 
 Run it from the project folder:  python src/15_export_plos_figures.py
@@ -31,6 +31,7 @@ FIGURE_MAP = {
     "Fig4.tif": "fig23_permutation_importance.png",
     "Fig5.tif": "fig28_calibration.png",
     "Fig6.tif": "fig24_leaderboard.png",           # CV against public score
+    "Fig7.tif": "fig29_ipssm_gap_by_centre.png",   # IPSS-M gap by centre (script 16)
     "S1_Fig.tif": "fig14_cox_cv.png",              # Cox models fold by fold
     "S2_Fig.tif": "fig19_tree_cv.png",             # tree models fold by fold
     "S3_Fig.tif": "fig16_schoenfeld.png",          # time-varying effects

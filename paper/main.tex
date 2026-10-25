@@ -60,9 +60,13 @@ test centre, the best of all submissions, while XGBoost alone fell to 0.7504. Pe
 importance on held-out centres shows that the mutation burden, counted on the gene panel
 shared by both centres, is the strongest signal. Against the published IPSS-M score,
 computed with no fitting (cross-validated 0.720), no fitted model is statistically better
-(ensemble $+0.005$, 95\% CI $-0.005$ to $+0.014$), and the recalibrated IPSS-M is slightly
-better calibrated. Domain knowledge, whether built into the features or into the IPSS-M,
-accounts for nearly all of the predictive performance.
+in cross-validation (ensemble $+0.005$, 95\% CI $-0.005$ to $+0.014$), and the recalibrated
+IPSS-M is slightly better calibrated. On the unseen test centre, however, the IPSS-M scored
+only 0.7255, 0.030 below the ensemble. Neither the test centre's sicker case mix nor its
+missing blood counts explains this gap; it lies above the range seen across training
+centres ($-0.014$ to $+0.017$), but it rests on one centre and has no confidence interval.
+Domain knowledge, whether built into the features or into the IPSS-M, accounts for nearly
+all of the predictive performance.
 \end{abstract}
 
 % ==================================================================
@@ -1503,8 +1507,12 @@ Date & Model & CV & Predicted & Public & Public $-$ CV \\
 23 Oct 2026 & IPSS-M-style Cox            & 0.7159 & --     & 0.7374 & $+0.022$ \\
 24 Oct 2026 & \textbf{Ensemble (final)}   & 0.7250 & 0.7575 & \textbf{0.7552} & $+0.030$ \\
 24 Oct 2026 & XGBoost Cox (5 seeds)       & 0.7244 & 0.7569 & 0.7504 & $+0.026$ \\
+25 Oct 2026 & IPSS-M score (no fitting)$^{a}$ & 0.7202 & --   & 0.7255 & $+0.005$ \\
 \bottomrule
 \end{tabular}
+
+\smallskip
+{\footnotesize $^{a}$ Uploaded in Stage 8 as a benchmark (Section~\ref{sec:ipssmtest}).}
 \end{table}
 
 \begin{figure}[H]
@@ -1642,7 +1650,7 @@ International Working Group for Prognosis in MDS, an international consortium th
 probably overlaps with this challenge's 23 training centres (the challenge is run with the
 institute of the IPSS-M's first author). If so, its weights were partly fitted to these
 patients, and its scores on the training data are partly in-sample and therefore
-optimistic. Its fair comparison is on the test centre.
+optimistic. Its fair comparison is on the test centre (Section~\ref{sec:ipssmtest}).
 
 \begin{figure}[H]
 \centering
@@ -1678,7 +1686,8 @@ Ensemble (final) minus IPSS-M      & 0.725 & $+0.005$  & 11/15 \\
 Table~\ref{tab:ipssmcv} gives the central result of this section. With no fitting at all,
 the IPSS-M reaches 0.720, essentially the level of every model fitted in this work. The
 final ensemble is ahead by only 0.005 on average and wins 11 of 15 folds. Since the IPSS-M
-may itself be partly in-sample here, the comparison is uncertain in both directions.
+may itself be partly in-sample here, the comparison is uncertain in both directions; the
+test centre settles part of this question (Section~\ref{sec:ipssmtest}).
 
 \subsection{Confidence intervals}
 The 15 cross-validation scores are not independent: the three repetitions reuse the same
@@ -1819,13 +1828,90 @@ than predicted. Such compression is the expected effect of a penalty that shrink
 coefficients towards zero, and it could be corrected by recalibrating the model's linear
 predictor, as was done for the IPSS-M.
 
+\subsection{The IPSS-M on the test centre}
+\label{sec:ipssmtest}
+The IPSS-M score of the 1{,}193 test patients was uploaded to the leaderboard on
+25~October 2026 (file \texttt{stage8\_ipssm\_score.csv}). It scored \textbf{0.7255}, against
+0.7552 for the ensemble (Table~\ref{tab:lb}). The gap at the test centre,
+\[
+0.7552 - 0.7255 = 0.0297,
+\]
+is six times the cross-validated gap of 0.0047. Every fitted model gained between 0.022 and
+0.033 from cross-validation to the test centre; the IPSS-M gained only 0.005. Even the
+IPSS-M-style Cox model, which uses the same variables as the IPSS-M but fits its own
+weights, scored higher on the test centre (0.7374 against 0.7255), although it was lower in
+cross-validation (0.716 against 0.720).
+
+Before explaining the gap, three candidate explanations were tested on the training data,
+where the outcomes are known (script \texttt{15\_ipssm\_external\_check.py},
+Table~\ref{tab:ipssmchecks}).
+\begin{enumerate}
+  \item \textbf{Case mix.} The test centre is much sicker: 33\% of its patients are IPSS-R
+        very high risk, against 11\% in training. Each validation fold was resampled, 20
+        times without replacement, so that its mix of the five IPSS-R risk groups matched the
+        test centre. The gap stayed at $+0.005$. A sicker case mix does not, by itself,
+        widen the gap.
+  \item \textbf{Missing clinical values.} Blood counts and blasts are missing for about
+        9.5\% of test patients against 2.5\% in training. Both models replace a missing
+        value with a typical one (the IPSS-M its reference mean, the elastic-net the training
+        median). Removing these values for an extra 7\% of each validation fold lowered the
+        elastic-net by 0.0023 and the IPSS-M by 0.0026: the gap widened by only 0.0003.
+  \item \textbf{Centre-to-centre variation.} The gap was scored inside each of the eight
+        training centres with at least 100 patients, using out-of-fold predictions so that
+        no model had seen the centre it was scored on. It ranges from $-0.014$ (ROM) to
+        $+0.017$ (DUS), with a standard deviation of 0.011 (Figure~\ref{fig:gapcentre}). In
+        three of the eight centres, including the largest (KI, 820 patients), the IPSS-M is
+        ahead.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Three checks of why the ensemble's lead over the IPSS-M is larger on the test
+centre. Gaps are ensemble minus IPSS-M (check 2: elastic-net minus IPSS-M), IPCW C-index.}
+\label{tab:ipssmchecks}
+\small
+\begin{tabular}{lrl}
+\toprule
+Check & Gap & Detail \\
+\midrule
+Cross-validation, 15 folds (reference)         & $+0.005$ & ensemble wins 11/15 folds \\
+1. Folds resampled to the test case mix        & $+0.005$ & ensemble wins 10/15 folds \\
+2. Extra 7\% of clinical values removed        & $+0.0003$ & widening of the gap \\
+3. Single training centres ($\geq 100$ patients) & $-0.014$ to $+0.017$ & sd 0.011, 8 centres \\
+Test centre KYW (public leaderboard)           & $+0.030$ & 0.7552 $-$ 0.7255 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{fig29_ipssm_gap_by_centre.png}
+\caption{Ensemble minus IPSS-M inside each training centre with at least 100 patients
+(out-of-fold, number of patients in brackets) and on the test centre (public score). The
+dashed line is the cross-validated gap.}
+\label{fig:gapcentre}
+\end{figure}
+
+\paragraph{What this means.} The test-centre gap is real in the sense that neither of the
+two obvious differences between the centres explains it. It lies about 2.6 standard
+deviations above the average training-centre gap ($+0.002$), larger than any training
+centre showed. Two readings are consistent with the evidence. The first is the caveat
+above: if the IPSS-M was developed partly on the training centres, its cross-validated
+score is optimistic, and a centre outside its development cohort would reveal its true
+level; the IPSS-M-style
+Cox overtaking it on the test centre fits this reading. The second is simply that the gap
+varies a lot from hospital to hospital, and this hospital is at the far end. One centre
+cannot separate the two. The public score also uses only part of the test centre, and
+Challenge Data gives no confidence interval for it, so the size of the gap is itself
+uncertain.
+
 \subsection{Summary of Stage 8}
 Against the IPSS-R, every fitted model is clearly and significantly better. Against the
 IPSS-M, a published score with no fitting, they are statistically indistinguishable in
-discrimination, and the IPSS-M is slightly better calibrated. Since the IPSS-M was very
-probably developed partly on these same patients, its scores here may be optimistic; the
-test-centre comparison (an upload of the IPSS-M score to the leaderboard) is the fairest
-available check.
+cross-validation, and the IPSS-M is slightly better calibrated. On the unseen test centre,
+which is not among the training centres, the ensemble was ahead by 0.030. Case mix and
+missing values do not explain this, but it rests on one centre, so it is evidence that the
+fitted models transfer better, not proof.
 
 % ==================================================================
 \section{Discussion}
@@ -1839,9 +1925,13 @@ features, boosted trees and the ensemble, added at most 0.006 more. Permutation 
 confirms the point: the strongest signal is the mutation burden, a simple count that only
 became comparable across centres once it was restricted to the shared gene panel.
 The published IPSS-M, which encodes the same expert knowledge in fixed weights, performs
-as well as every fitted model here (Section~\ref{sec:stage8}). The honest conclusion is
-that this work reproduces the performance of the current clinical standard from the
-challenge data, with transparent and validated code, but does not surpass it.
+as well as every fitted model in cross-validation (Section~\ref{sec:stage8}), where it may
+be favoured by having been developed partly on the same patients. On the test centre, which
+is not among the training centres, it fell 0.030 behind the ensemble, a gap that neither case mix nor missing values
+explains (Section~\ref{sec:ipssmtest}). The honest conclusion is that this work reproduces
+the performance of the current clinical standard from the challenge data, with transparent
+and validated code, and may transfer better to a new hospital, but a single external centre
+cannot establish that it surpasses it.
 
 \paragraph{Validation that matches the test.} The test set is a hospital never seen in
 training, so every model was validated on held-out hospitals and compared fold by fold on
@@ -1872,11 +1962,15 @@ protective later, a violation of proportional hazards that its single Cox coeffi
 \begin{itemize}
   \item \textbf{Overlap with the IPSS-M cohort.} The training data very probably overlap
         with the cohort on which the IPSS-M was developed. Its cross-validated scores here
-        may be optimistic, and the data are not new to the field.
+        may be optimistic, and the data are not new to the field. Whether this explains the
+        IPSS-M's weaker test-centre score cannot be checked without knowing which centres
+        were in its development cohort.
   \item \textbf{One external centre.} The test set comes from a single hospital, and the
         public score uses only part of it. Conclusions about how the models transfer rest
-        on this one centre; the private leaderboard, updated on 15~June and 15~December,
-        will give a second, larger look at the same centre.
+        on this one centre. The ensemble's lead over the IPSS-M varies from $-0.014$ to
+        $+0.017$ across training centres, so a single centre's gap is a noisy measurement.
+        The private leaderboard, updated on 15~June and 15~December, will give a second,
+        larger look at the same centre.
   \item \textbf{Case-mix shift.} The test centre is much sicker than the training centres.
         The models were not adapted to it, for example by reweighting training patients to
         resemble the test centre.
@@ -1907,8 +2001,10 @@ C-index of about 0.72 in cross-validation and 0.755 on an unseen test centre, ab
 better than the IPSS-R clinical score. The final model, a rank-averaged ensemble of an
 elastic-net Cox and a gradient-boosted Cox model, was chosen by paired cross-validation
 before its public score was known, and it was the best submitted model on the test centre.
-It does not, however, measurably improve on the published IPSS-M, which reaches the same
-discrimination with no fitting and slightly better calibration. The main lessons are that
+In cross-validation it does not measurably improve on the published IPSS-M, which reaches
+the same discrimination with no fitting and slightly better calibration; on the unseen test
+centre it led the IPSS-M by 0.030 (0.7552 against 0.7255), a promising result that a single
+centre cannot confirm. The main lessons are that
 domain knowledge and a validation design that mirrors the real test mattered far more than
 the choice of algorithm, and that a new model should always be compared with the strongest
 existing clinical score before any claim of improvement.

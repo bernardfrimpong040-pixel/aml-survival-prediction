@@ -226,11 +226,11 @@ scoring, reached 0.725 (0.700 to 0.750) and beat the elastic-net alone on all 15
 but its advantage over the IPSS-M was small and uncertain (+0.005, $-$0.005 to +0.014;
 p = 0.29). A recalibrated IPSS-M was slightly better calibrated (integrated Brier score
 0.160 against 0.163). On the external centre, the ensemble scored 0.755 and the IPSS-M
-[IPSS-M PUBLIC SCORE]. Mutation burden on the shared gene panel was the most important
+0.726, a gap unexplained by case mix or missing data. Mutation burden on the shared gene panel was the most important
 predictor group.
 
-\textbf{Conclusions:} Carefully engineered fitted models reproduced, but did not clearly
-exceed, the IPSS-M. New prognostic models for myeloid neoplasms should be benchmarked
+\textbf{Conclusions:} Fitted models matched the IPSS-M internally and exceeded it at one
+external centre. New prognostic models for myeloid neoplasms should be benchmarked
 against the IPSS-M with centre-level validation before improvement is claimed.
 
 % Please keep the Author Summary between 150 and 200 words
@@ -438,6 +438,15 @@ degrees of freedom. The proportional hazards assumption of the IPSS-M-style Cox 
 checked with scaled Schoenfeld residuals~\cite{grambsch1994}. Permutation
 importance~\cite{breiman2001} was measured on held-out folds by shuffling groups of related
 predictors together and recording the fall in concordance.
+
+To interpret the difference between the ensemble and the IPSS-M at the external centre,
+three explanations were tested on the training data. For case mix, each validation fold was
+resampled 20 times without replacement to the external centre's distribution of IPSS-R risk
+groups. For missing data, blood counts and blast percentages were removed for an extra 7\%
+of each validation fold, matching the higher missingness at the external centre, and the
+fall in concordance of the IPSS-M and the elastic-net was compared. For between-centre
+variation, the difference was computed within each training centre with at least 100
+patients, using out-of-fold predictions.
 
 \subsection*{Software}
 Analyses used Python 3.13 with pandas [VERSION], NumPy [VERSION], scikit-learn
@@ -673,9 +682,22 @@ elastic-net (0.7543) although it had beaten the elastic-net on 14 of 15 folds; a
 subgroup analysis did not support the explanation that trees rank high-risk patients
 poorly, since in the IPSS-R very-high-risk subgroup the boosted model ranked better than
 the elastic-net in cross-validation (0.623 against 0.608, 11 of 15 folds). The IPSS-M scored
-[IPSS-M PUBLIC SCORE]. All public scores were 0.02 to 0.03 higher than their
-cross-validated means (Fig~\ref{fig6}), plausibly because the wider spread of risk at the
-test centre makes patients easier to rank.
+0.7255, 0.030 below the ensemble; no prediction was written down before this submission.
+The fitted models' public scores were 0.022 to 0.033 higher than their cross-validated
+means (Fig~\ref{fig6}), plausibly because the wider spread of risk at the test centre makes
+patients easier to rank, but the IPSS-M gained only 0.005. Even the IPSS-M-style Cox model,
+with the same variables as the IPSS-M but weights fitted to the training data, scored
+higher at the test centre (0.7374), although it was lower in cross-validation (0.716).
+
+The ensemble's lead over the IPSS-M was therefore six times larger at the external centre
+than in cross-validation (0.030 against 0.005). Neither case mix nor missing data explained
+this (Table~\ref{table6}). Validation folds resampled to the external centre's risk mix,
+where 33\% of patients are IPSS-R very high risk against 11\% in training, gave the same
+difference as before (0.005). Removing clinical values for an extra 7\% of patients lowered
+the IPSS-M and the elastic-net almost equally (by 0.0026 and 0.0023). Within single training
+centres, the difference ranged from $-$0.014 to 0.017 (standard deviation 0.011), and the
+IPSS-M was ahead in three of eight centres, including the largest (Fig~\ref{fig7}). The
+external centre's difference lay above this range.
 
 \begin{table}[H]
 \begin{adjustwidth}{-2.25in}{0in}
@@ -688,7 +710,7 @@ Elastic-net Cox & 0.7218 & -- & 0.7543 \\ \hline
 IPSS-M-style Cox & 0.7159 & -- & 0.7374 \\ \hline
 Ensemble (final model) & 0.7250 & 0.7575 & 0.7552 \\ \hline
 Boosted Cox trees & 0.7244 & 0.7569 & 0.7504 \\ \hline
-IPSS-M score (not fitted) & 0.7202 & [PREDICTION] & [SCORE] \\ \hline
+IPSS-M score (not fitted) & 0.7202 & -- & 0.7255 \\ \hline
 \end{tabular}
 \begin{flushleft} Public score: censoring-weighted concordance index computed by the
 challenge platform on the public subset of the test centre. Written prediction: the
@@ -707,6 +729,35 @@ submission; dotted lines join them to the public scores.}
 \label{fig6}
 \end{figure}
 
+\begin{table}[H]
+\begin{adjustwidth}{-2.25in}{0in}
+\centering
+\caption{{\bf Why is the ensemble further ahead of the IPSS-M at the external centre?}}
+\begin{tabular}{|l|c|l|}
+\hline
+{\bf Analysis} & {\bf Ensemble minus IPSS-M} & {\bf Detail}\\ \thickhline
+Cross-validation, 15 folds & 0.005 & ensemble ahead on 11/15 folds \\ \hline
+Folds resampled to the external case mix & 0.005 & ensemble ahead on 10/15 folds \\ \hline
+Extra 7\% of clinical values removed & +0.0003$^{a}$ & change in the difference \\ \hline
+Single training centres ($\geq$100 patients) & $-$0.014 to 0.017 & SD 0.011, 8 centres \\ \hline
+External centre (public score) & 0.030 & 0.7552 minus 0.7255 \\ \hline
+\end{tabular}
+\begin{flushleft} Censoring-weighted concordance index truncated at 7 years. $^{a}$Elastic-net
+minus IPSS-M, the change caused by removing the values.
+\end{flushleft}
+\label{table6}
+\end{adjustwidth}
+\end{table}
+
+\begin{figure}[H]
+\plosfig{fig29_ipssm_gap_by_centre.png}
+\caption{{\bf The difference between the ensemble and the IPSS-M varies between centres.}
+Ensemble minus IPSS-M concordance within each training centre with at least 100 patients
+(out-of-fold predictions; number of patients in brackets) and at the external centre
+(public score). The dashed line is the cross-validated difference.}
+\label{fig7}
+\end{figure}
+
 \section*{Discussion}
 In 3,173 patients from 23 centres, with validation on held-out centres and on an unseen
 external centre, carefully built survival models reproduced the discrimination of the
@@ -714,7 +765,13 @@ published IPSS-M but did not clearly exceed it. The IPSS-M, used with its publis
 weights and no fitting, reached a cross-validated concordance of 0.720; the best fitted
 model, an ensemble of an elastic-net and a boosted Cox model, reached 0.725, an advantage
 whose confidence interval includes zero. The recalibrated IPSS-M was also slightly better
-calibrated. [ADD ONE SENTENCE ON THE IPSS-M EXTERNAL SCORE ONCE KNOWN.]
+calibrated. At the external centre, however, the ensemble was 0.030 ahead of the IPSS-M.
+Two readings fit this result. If the IPSS-M was developed partly on the training centres,
+its cross-validated scores are optimistic, and a centre outside its development cohort
+shows its true level; the IPSS-M-style model, refitted to the training data, also overtook
+it there. Alternatively, the difference simply varies widely between hospitals, as it did
+across training centres, and this centre lies at the far end. A single external centre
+cannot separate the two.
 
 Most of the predictive performance came from clinical knowledge rather than from the
 algorithm. Moving from four generic variables to 24 variables chosen from the IPSS-R and
@@ -742,7 +799,8 @@ the protection that averaging two different models provided here.
 This study has limitations. The training centres very probably overlap with the cohort on
 which the IPSS-M was developed~\cite{bernard2022}; if so, the IPSS-M's cross-validated
 scores are partly in-sample and optimistic, and the external centre is its fairest test.
-External validation rests on one centre, scored on a public subset of its patients. The
+External validation rests on one centre, scored on a public subset of its patients, and
+the platform reports no confidence interval for that score. The
 data contain no age, treatment or disease subtype, all of which affect survival. Monocytes
 and 60 genes could not be used because of differences between centres, and laboratory
 calibration differences cannot be checked. The karyotype parser is a set of hand-written
@@ -753,8 +811,9 @@ its own results exactly.
 
 \section*{Conclusion}
 For myeloid neoplasms, fitted survival models built on clinical, cytogenetic and molecular
-data, and validated on hospitals they had not seen, matched but did not measurably improve
-on the published IPSS-M. Claims that a new model improves prognosis should be tested
+data, and validated on hospitals they had not seen, matched the published IPSS-M in
+cross-validation and exceeded it by 0.030 at one external centre, a difference not explained
+by case mix or missing data but not yet confirmed beyond that centre. Claims that a new model improves prognosis should be tested
 against the IPSS-M, with validation grouped by centre and paired comparisons, before they
 are accepted.
 

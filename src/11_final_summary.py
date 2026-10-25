@@ -46,6 +46,8 @@ LEADERBOARD = [
      "cv": 0.7250, "predicted": 0.7575, "public": 0.7552},
     {"date": "2026-10-24", "file": "stage5_xgboost_cox.csv", "model": "XGBoost Cox (5 seeds)",
      "cv": 0.7244, "predicted": 0.7569, "public": 0.7504},
+    {"date": "2026-10-25", "file": "stage8_ipssm_score.csv", "model": "IPSS-M score (no fitting)",
+     "cv": 0.7202, "predicted": None, "public": 0.7255},
 ]
 lb = pd.DataFrame(LEADERBOARD)
 lb["public_minus_cv"] = (lb["public"] - lb["cv"]).round(4)
@@ -58,10 +60,13 @@ print(lb.drop(columns=["file"]).to_string(index=False))
 fig, ax = plt.subplots(figsize=(7.2, 4.6))
 # Where each label goes (points offset) and which side of the dot it sits on.
 offsets = {"Elastic-net Cox": ((-10, 0), "right"), "IPSS-M-style Cox": ((8, -4), "left"),
-           "Ensemble (final)": ((8, 6), "left"), "XGBoost Cox (5 seeds)": ((8, -10), "left")}
+           "Ensemble (final)": ((8, 6), "left"), "XGBoost Cox (5 seeds)": ((8, -10), "left"),
+           "IPSS-M score (no fitting)": ((8, 0), "left")}
 for _, row in lb.iterrows():
     final = row["model"].startswith("Ensemble")
     colour = config.COLOR_TEST if final else config.COLOR_TRAIN
+    if row["model"].startswith("IPSS-M score"):       # the published clinical score
+        colour = config.COLOR_GROUP3
     if pd.notna(row["predicted"]):
         # hollow marker = prediction; thin line from prediction to the real score
         ax.plot([row["cv"], row["cv"]], [row["predicted"], row["public"]],
@@ -76,9 +81,9 @@ for _, row in lb.iterrows():
 ax.plot([], [], "o", markersize=8, markerfacecolor="white", markeredgecolor=config.TEXT_SOFT,
         markeredgewidth=2, linestyle="none", label="predicted before upload")
 ax.plot([], [], "o", markersize=8, color=config.TEXT_SOFT, linestyle="none", label="public score")
-ax.legend(loc="lower right", fontsize=8.5)
+ax.legend(loc="upper left", fontsize=8.5)
 ax.set_xlim(0.714, 0.7285)
-ax.set_ylim(0.734, 0.760)
+ax.set_ylim(0.720, 0.762)
 ax.set_xlabel("Cross-validated IPCW C-index (15 centre-grouped folds)")
 ax.set_ylabel("Public leaderboard IPCW C-index")
 ax.set_title("Cross-validation vs the unseen test centre")
