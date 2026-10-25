@@ -49,7 +49,7 @@ hold out whole hospitals. The public score is the leaderboard result on the unse
    six times the cross-validated gap. I tested two explanations on the training data and
    rejected both: the test hospital's sicker case mix (resampling folds to match it keeps
    the gap at +0.005) and its extra missing blood counts (both models lose the same).
-   Across single training hospitals the gap ranges from −0.014 to +0.017, so one hospital
+   Across single training hospitals the gap ranges from −0.014 to +0.019, so one hospital
    is promising evidence, not proof.
 
 ![IPSS-M gap by hospital](figures/fig29_ipssm_gap_by_centre.png)

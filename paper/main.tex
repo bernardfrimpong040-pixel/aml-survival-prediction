@@ -64,7 +64,7 @@ in cross-validation (ensemble $+0.005$, 95\% CI $-0.005$ to $+0.014$), and the r
 IPSS-M is slightly better calibrated. On the unseen test centre, however, the IPSS-M scored
 only 0.7255, 0.030 below the ensemble. Neither the test centre's sicker case mix nor its
 missing blood counts explains this gap; it lies above the range seen across training
-centres ($-0.014$ to $+0.017$), but it rests on one centre and has no confidence interval.
+centres ($-0.014$ to $+0.019$), but it rests on one centre and has no confidence interval.
 Domain knowledge, whether built into the features or into the IPSS-M, accounts for nearly
 all of the predictive performance.
 \end{abstract}
@@ -1859,7 +1859,7 @@ Table~\ref{tab:ipssmchecks}).
   \item \textbf{Centre-to-centre variation.} The gap was scored inside each of the eight
         training centres with at least 100 patients, using out-of-fold predictions so that
         no model had seen the centre it was scored on. It ranges from $-0.014$ (ROM) to
-        $+0.017$ (DUS), with a standard deviation of 0.011 (Figure~\ref{fig:gapcentre}). In
+        $+0.019$ (DUS), with a standard deviation of 0.011 (Figure~\ref{fig:gapcentre}). In
         three of the eight centres, including the largest (KI, 820 patients), the IPSS-M is
         ahead.
 \end{enumerate}
@@ -1875,9 +1875,9 @@ centre. Gaps are ensemble minus IPSS-M (check 2: elastic-net minus IPSS-M), IPCW
 Check & Gap & Detail \\
 \midrule
 Cross-validation, 15 folds (reference)         & $+0.005$ & ensemble wins 11/15 folds \\
-1. Folds resampled to the test case mix        & $+0.005$ & ensemble wins 10/15 folds \\
+1. Folds resampled to the test case mix        & $+0.005$ & ensemble wins 11/15 folds \\
 2. Extra 7\% of clinical values removed        & $+0.0003$ & widening of the gap \\
-3. Single training centres ($\geq 100$ patients) & $-0.014$ to $+0.017$ & sd 0.011, 8 centres \\
+3. Single training centres ($\geq 100$ patients) & $-0.014$ to $+0.019$ & sd 0.011, 8 centres \\
 Test centre KYW (public leaderboard)           & $+0.030$ & 0.7552 $-$ 0.7255 \\
 \bottomrule
 \end{tabular}
@@ -1893,8 +1893,8 @@ dashed line is the cross-validated gap.}
 \end{figure}
 
 \paragraph{What this means.} The test-centre gap is real in the sense that neither of the
-two obvious differences between the centres explains it. It lies about 2.6 standard
-deviations above the average training-centre gap ($+0.002$), larger than any training
+two obvious differences between the centres explains it. It lies about 2.4 standard
+deviations above the average training-centre gap ($+0.003$), larger than any training
 centre showed. Two readings are consistent with the evidence. The first is the caveat
 above: if the IPSS-M was developed partly on the training centres, its cross-validated
 score is optimistic, and a centre outside its development cohort would reveal its true
@@ -1968,7 +1968,7 @@ protective later, a violation of proportional hazards that its single Cox coeffi
   \item \textbf{One external centre.} The test set comes from a single hospital, and the
         public score uses only part of it. Conclusions about how the models transfer rest
         on this one centre. The ensemble's lead over the IPSS-M varies from $-0.014$ to
-        $+0.017$ across training centres, so a single centre's gap is a noisy measurement.
+        $+0.019$ across training centres, so a single centre's gap is a noisy measurement.
         The private leaderboard, updated on 15~June and 15~December, will give a second,
         larger look at the same centre.
   \item \textbf{Case-mix shift.} The test centre is much sicker than the training centres.
